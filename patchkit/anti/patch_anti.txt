@@ -22,6 +22,17 @@
 # Chu y chu ky that trong AntiMicu.java la run(Context)Z. Neu MT bao NoSuchMethod thi kiem tra lai smali:
 # .method public static run(Landroid/content/Context;)Z
 
+## 3b. Kich hoat chong repack (lam 1 lan sau build dau tien) - AntiMicu v3
+# - Cai APK da patch (chua dien EXPECT) len may, mo app, xem logcat tag MicuAnti:
+#   cert-sha256=<hash> va dex-crc=<crc>
+# - Dien 2 gia tri do vao EXPECT_CERT_SHA256 / EXPECT_DEX_CRC trong AntiMicu.java,
+#   bien dich lai + patch lai -> tu ban sau, APK bi ky lai key khac hoac sua dex la tu out.
+# - Ma log e1..e9: e1 debug, e2 tracer, e3 frida, e4 hookapp, e5 chu ky, e6 dex, e7 lib, e8 thieu lop key, e9 recheck.
+
+## 3c. Manifest cung (lam tren MT Manager -> AndroidManifest.xml)
+# - application: android:allowBackup="false", android:debuggable="false"
+# - xoa uses-permission DUMP / READ_LOGS neu co (bot bang chung cho tool soi).
+
 ## 3. Tang cuong them (khong can code, lam tren MT Manager)
 # a) Xoa / doi ten lib yeu khong can thiet neu muon nhe:
 #    lib/armeabi-v7a/libpx_32.so, libx_32.so neu may m chi chay arm64 thi giu arm64, xoa 32 de giam detect.

@@ -11,56 +11,103 @@ import android.util.Log;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-// AntiMicu v2: full combo Java (khong can NDK). Goi AntiMicu.run(ctx) o
-// Application.onCreate TRUOC khi load libMixu.
-// Tang moi so voi v1: check chu ky APK (chong repack), check libMixu nguyen ven,
-// mo rong dau hieu Frida/hook, CHAN THAT report (fail nhanh), tu kiem tra lai sau 60s.
-// Luu y that: anti khong bao gio 100% - ban game chu yeu do server soi hanh vi.
-// Test acc clone truoc khi giao khach.
+// AntiMicu v3: manh nhat lam duoc bang Java thuan (khong NDK).
+// Goi AntiMicu.run(ctx) o Application.onCreate TRUOC khi load libMixu.
+// Moi so voi v2:
+//  - Chuoi nhay cam ma hoa XOR (soi strings khong thay frida/su/status...).
+//  - Check CRC classes.dex chong sua dex (dien EXPECT_DEX_CRC sau build dau tien).
+//  - Check cheo: KeyOffline phai ton tai (chong boc lop key ra).
+//  - Phat hien root rong hon: which su, getprop ro.debuggable/ro.secure.
+// Honest note: khong co anti client nao tuyet doi - ban game chu yeu do server
+// soi hanh vi (speed/teleport/chi so). Test acc clone truoc khi giao khach.
 public class AntiMicu {
 
     static final String TAG = "MicuAnti";
+    static final int XORK = 0x5A;
 
-    // DIEN SAU KHI BUILD APK LAN DAU: lay tu logcat (tag MicuAnti, dong cert-sha256=...).
-    // De nguyen placeholder thi buoc check chu ky tu bo qua (khong block).
+    // DIEN SAU BUILD DAU TIEN: xem logcat tag MicuAnti (cert-sha256=..., dex-crc=...).
+    // De placeholder thi buoc do tu bo qua.
     static final String EXPECT_CERT_SHA256 = "PUT_CERT_SHA256_HERE";
-    // Kich thuoc toi thieu cua libMixu.so (byte). File hien tai ~13.9MB -> de 10MB.
+    static final String EXPECT_DEX_CRC = "PUT_DEX_CRC_HERE";
     static final long MIXU_MIN_SIZE = 10L * 1024L * 1024L;
+
+    // Chuoi ma hoa (gen bang gen-blobs.js, giai bang dx). Khong de lo plaintext.
+    static final String S_STATUS = "752b2a363d702f383e357f222236202039";
+    static final String S_MAPS = "752b2a363d702f383e357f3c372727";
+    static final String S_TASK = "752b2a363d702f383e357f2537243f";
+    static final String S_TRACER = "0e29393a3b2d0c343669";
+    static final String S_FRIDA = "3c29313d3f";
+    static final String S_GUM = "3d2e3574342c";
+    static final String S_GADGET = "3d3a3c3e3b2b";
+    static final String S_LIJ = "363236333b3c283220";
+    static final String S_SUB = "292e3a2a2a2d3d2937";
+    static final String S_XPO = "222b372a3b3b";
+    static final String S_ZYG = "20223f302d34";
+    static final String S_RIRU = "28322a2c";
+    static final String S_HOOKZZ = "323437322425";
+    static final String S_DOBBY = "3e343a3b27";
+    static final String S_GMAIN = "3d36393030";
+    static final String S_WHICH = "2d33313a36";
+    static final String S_SU = "292e";
+    static final String S_GETPROP = "3d3e2c292c302c";
+    static final String S_DBG = "2834763d3b3d293a3532323d33";
+    static final String S_SEC = "2834762a3b3c292f37";
+    static final String S_LIB = "36323a34372729"; // libmixu
+    static final String P_XPO = "3e3e762b313d2a73333d3423393e307b323b273a2b2b62242c3034202a2b2137";
+    static final String P_EDX = "35293f77333a332a3132247f33332c2525382d2d60222d2323242533";
+    static final String P_SUB = "393435772d3e292f3b387e2223352721382a3c2c";
+    static final String P_LSP = "35293f77322c2c322136347f3b363a342d2e3a";
+    static final String P_VA = "3334762f3f713925223c233432";
+
+    static String dx(String hex){
+        try{
+            int n = hex.length() / 2;
+            byte[] b = new byte[n];
+            for(int i = 0; i < n; i++)
+                b[i] = (byte) Integer.parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+            for(int i = 0; i < n; i++) b[i] = (byte) (b[i] ^ XORK ^ (i & 0xFF));
+            return new String(b, "UTF-8");
+        }catch(Exception e){ return ""; }
+    }
 
     public static boolean run(Context ctx){
         try{
-            logCert(ctx); // in ra de lay hash dien vao EXPECT o tren (chi log, khong block)
-            if(!verifySignature(ctx)){ Log.i(TAG,"sig"); return false; }
-            if(!verifyLib(ctx)){ Log.i(TAG,"lib"); return false; }
-            if(isDebugger()){ Log.i(TAG,"debug"); return false; }
-            if(hasTracerPid()){ Log.i(TAG,"tracer"); return false; }
-            if(hasFrida()){ Log.i(TAG,"frida"); return false; }
-            if(hasHookApp(ctx)){ Log.i(TAG,"hookapp"); return false; }
-            if(isRooted(ctx)){ Log.i(TAG,"rooted-log-only"); } // may root van cho chay
-            if(isEmulator()){ Log.i(TAG,"emu-log-only"); } // multi hay chay ao, chi log
+            logIds(ctx);
+            if(!mutualCheck()){ Log.i(TAG, "e8"); return false; }
+            if(!verifySignature(ctx)){ Log.i(TAG, "e5"); return false; }
+            if(!verifyDex(ctx)){ Log.i(TAG, "e6"); return false; }
+            if(!verifyLib(ctx)){ Log.i(TAG, "e7"); return false; }
+            if(isDebugger()){ Log.i(TAG, "e1"); return false; }
+            if(hasTracerPid()){ Log.i(TAG, "e2"); return false; }
+            if(hasFrida()){ Log.i(TAG, "e3"); return false; }
+            if(hasHookApp(ctx)){ Log.i(TAG, "e4"); return false; }
+            if(isRooted(ctx)){ Log.i(TAG, "r1"); }
+            if(isEmulator()){ Log.i(TAG, "emu-log-only"); }
             blockReports();
             scheduleRecheck(ctx);
             return true;
         }catch(Exception e){ return true; }
     }
 
-    // 0. In hash chu ky de dien EXPECT (chay 1 lan tren APK da sign that)
-    static void logCert(Context ctx){
+    // 0. In cac id de dien EXPECT (chay 1 lan tren APK sign that, xem logcat)
+    static void logIds(Context ctx){
         try{
             String h = certSha256(ctx);
             if(h != null) Log.i(TAG, "cert-sha256=" + h);
+            String c = dexCrc(ctx);
+            if(c != null) Log.i(TAG, "dex-crc=" + c);
         }catch(Exception e){}
     }
     static String certSha256(Context ctx){
         try{
             PackageManager pm = ctx.getPackageManager();
-            String pkg = ctx.getPackageName();
-            PackageInfo pi = pm.getPackageInfo(pkg, PackageManager.GET_SIGNATURES);
+            PackageInfo pi = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SIGNATURES);
             if(pi == null || pi.signatures == null || pi.signatures.length == 0) return null;
             Signature s = pi.signatures[0];
             MessageDigest d = MessageDigest.getInstance("SHA-256");
@@ -70,7 +117,15 @@ public class AntiMicu {
             return sb.toString();
         }catch(Exception e){ return null; }
     }
-    // Chong repack: APK bi ky lai bang key khac la chet. Chua dien EXPECT thi bo qua.
+    static String dexCrc(Context ctx){
+        try{
+            java.util.zip.ZipFile z = new java.util.zip.ZipFile(ctx.getApplicationInfo().sourceDir);
+            java.util.zip.ZipEntry e = z.getEntry("classes.dex");
+            String c = (e == null) ? null : Long.toHexString(e.getCrc());
+            z.close();
+            return c;
+        }catch(Exception e){ return null; }
+    }
     static boolean verifySignature(Context ctx){
         try{
             if(EXPECT_CERT_SHA256.startsWith("PUT_")) return true;
@@ -78,13 +133,26 @@ public class AntiMicu {
             return h != null && h.equalsIgnoreCase(EXPECT_CERT_SHA256);
         }catch(Exception e){ return true; }
     }
-
-    // 0b. libMixu.so phai ton tai va du lon (chong xoa/thay lib)
+    static boolean verifyDex(Context ctx){
+        try{
+            if(EXPECT_DEX_CRC.startsWith("PUT_")) return true;
+            String c = dexCrc(ctx);
+            return c != null && c.equalsIgnoreCase(EXPECT_DEX_CRC);
+        }catch(Exception e){ return true; }
+    }
     static boolean verifyLib(Context ctx){
         try{
-            File lib = new File(ctx.getApplicationInfo().nativeLibraryDir + "/libMixu.so");
+            File lib = new File(ctx.getApplicationInfo().nativeLibraryDir + "/" + dx(S_LIB) + ".so");
             return lib.exists() && lib.length() >= MIXU_MIN_SIZE;
         }catch(Exception e){ return true; }
+    }
+
+    // 0b. Lop key phai di kem (chong boc KeyOffline ra khoi APK)
+    static boolean mutualCheck(){
+        try{
+            Class.forName("vn.micu.gate.KeyOffline");
+            return true;
+        }catch(Exception e){ return false; }
     }
 
     // 1. anti-debug
@@ -94,9 +162,9 @@ public class AntiMicu {
     }
     static boolean hasTracerPid(){
         try{
-            BufferedReader r = new BufferedReader(new FileReader("/proc/self/status"));
+            BufferedReader r = new BufferedReader(new FileReader(dx(S_STATUS)));
             String l; while((l = r.readLine()) != null){
-                if(l.startsWith("TracerPid:")){
+                if(l.startsWith(dx(S_TRACER))){
                     int v = Integer.parseInt(l.split(":")[1].trim());
                     r.close(); return v != 0;
                 }
@@ -105,37 +173,30 @@ public class AntiMicu {
         return false;
     }
 
-    // 2. anti-frida / hook mo rong: maps + thread + port + app hook
-    static final Set<String> MAPS_BAD = new HashSet<>(Arrays.asList(
-        "frida", "gum-js", "gadget", "linjector", "substrate", "cydia",
-        "hookzz", "shadowhook", "dobby", "whale", "xposed", "edxp",
-        "riru", "zygisk", "lsposed", "edxposed", "pool-frida", "frida-agent"
-    ));
+    // 2. anti-frida / hook: maps + thread + port (tu khoa giai ma runtime)
     static boolean hasFrida(){
         try{
-            BufferedReader r = new BufferedReader(new FileReader("/proc/self/maps"));
+            String[] keys = {S_FRIDA, S_GUM, S_GADGET, S_LIJ, S_SUB, S_XPO, S_HOOKZZ, S_DOBBY};
+            BufferedReader r = new BufferedReader(new FileReader(dx(S_MAPS)));
             String l; while((l = r.readLine()) != null){
                 String s = l.toLowerCase();
-                for(String b : MAPS_BAD){
-                    // bo qua dong cua chinh lib he thong co ten trung lap tinh co
-                    if(s.contains(b) && !s.contains("libmixu")){
-                        // magisk/zygisk chi log o muc root, o day chi block frida/hook that
-                        if(b.equals("zygisk") || b.equals("riru")) continue;
-                        r.close(); return true;
-                    }
+                for(String k : keys){
+                    String b = dx(k);
+                    if(!b.isEmpty() && s.contains(b) && !s.contains(dx(S_LIB))){ r.close(); return true; }
                 }
+                // zygisk/riru tren may root nhieu -> chi log o muc root, khong block o day
             } r.close();
             Set<String> bad = new HashSet<>(Arrays.asList(
-                "gmain", "gum-js-loop", "frida", "linjector", "gdb", "lldb"));
+                dx(S_GMAIN), dx(S_GUM) + "-loop", dx(S_FRIDA), dx(S_LIJ), "gdb", "lldb"));
             try{
-                File d = new File("/proc/self/task");
+                File d = new File(dx(S_TASK));
                 File[] ts = d.listFiles();
                 if(ts != null) for(File t : ts){
-                    String n = readAll("/proc/self/task/" + t.getName() + "/comm").toLowerCase().trim();
+                    String n = readAll(dx(S_TASK) + "/" + t.getName() + "/comm").toLowerCase().trim();
                     if(bad.contains(n)) return true;
                 }
             }catch(Exception e){}
-            int[] ports = {27042, 27047}; // frida server mac dinh
+            int[] ports = {27042, 27047};
             for(int p : ports){
                 try{
                     java.net.Socket s = new java.net.Socket();
@@ -153,20 +214,19 @@ public class AntiMicu {
         }catch(Exception e){ return ""; }
     }
 
-    // 2b. app hook cai tren may (xposed/edxposed/substrate). Block vi de bi soi menu.
     static boolean hasHookApp(Context ctx){
         try{
-            String[] pkgs = {"de.robv.android.xposed.installer", "org.meowcat.edxposed.manager",
-                "com.saurik.substrate", "org.lsposed.manager", "io.va.exposed"};
+            String[] pkgs = {dx(P_XPO), dx(P_EDX), dx(P_SUB), dx(P_LSP), dx(P_VA)};
             PackageManager pm = ctx.getPackageManager();
             for(String p : pkgs){
+                if(p.isEmpty()) continue;
                 try{ pm.getPackageInfo(p, 0); return true; }catch(Exception e){}
             }
         }catch(Exception e){}
         return false;
     }
 
-    // 3. root (log only) + emulator (log only - multi hay chay ao)
+    // 3. root rong hon (log only - khong duoi khach root) + emulator (log only)
     static boolean isRooted(Context ctx){
         String[] paths = {"/system/bin/su", "/system/xbin/su", "/sbin/su", "/sbin/.magisk",
             "/system/app/Superuser.apk", "/data/adb/magisk", "/data/adb/modules", "/data/adb/ksu"};
@@ -175,22 +235,43 @@ public class AntiMicu {
             String tags = android.os.Build.TAGS;
             if(tags != null && tags.contains("test-keys")) return true;
         }catch(Exception e){}
+        if(shellHas(dx(S_WHICH), dx(S_SU))) return true; // which su
+        String dbg = getProp(dx(S_DBG));
+        String sec = getProp(dx(S_SEC));
+        if("1".equals(dbg) || "0".equals(sec)) return true; // rom debug
         return false;
+    }
+    static boolean shellHas(String cmd, String arg){
+        try{
+            Process p = Runtime.getRuntime().exec(new String[]{cmd, arg});
+            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String l = r.readLine(); r.close();
+            p.destroy();
+            return l != null && l.trim().length() > 0;
+        }catch(Exception e){ return false; }
+    }
+    static String getProp(String k){
+        try{
+            Process p = Runtime.getRuntime().exec(new String[]{dx(S_GETPROP), k});
+            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String l = r.readLine(); r.close();
+            p.destroy();
+            return l == null ? "" : l.trim();
+        }catch(Exception e){ return ""; }
     }
     static boolean isEmulator(){
         try{
             String f = android.os.Build.FINGERPRINT;
             String m = android.os.Build.MODEL;
-            String p = android.os.Build.PRODUCT;
+            String pr = android.os.Build.PRODUCT;
             if(f != null && (f.contains("generic") || f.contains("vbox") || f.contains("test-keys"))) return true;
             if(m != null && (m.contains("Emulator") || m.contains("Android SDK"))) return true;
-            if(p != null && (p.contains("sdk") || p.contains("vbox"))) return true;
+            if(pr != null && (pr.contains("sdk") || pr.contains("vbox"))) return true;
         }catch(Exception e){}
         return false;
     }
 
-    // 4. CHAN THAT report: host nam trong den -> di qua proxy chet (127.0.0.1:9) nen fail nhanh.
-    //    Ban cu chi log. Test acc clone: neu game crash/mat mang thi rut bot domain do ra khoi den.
+    // 4. CHAN THAT report: host/den co duong dan report -> proxy chet (fail nhanh).
     static final Set<String> BLOCK = new HashSet<>(Arrays.asList(
         "report", "abuse", "cheat", "hack", "log-collect", "feedback",
         "analytics", "haegin", "playtogether"
@@ -209,7 +290,6 @@ public class AntiMicu {
                         String h = (u.getHost() == null ? "" : u.getHost().toLowerCase())
                             + (u.getPath() == null ? "" : u.getPath().toLowerCase());
                         for(String b : BLOCK){
-                            // chi chan duong dan report, tha duong dan choi game de tranh mat ket noi
                             if(h.contains(b) && (h.contains("report") || h.contains("log")
                                 || h.contains("analytic") || h.contains("abuse") || h.contains("ban"))){
                                 Log.i(TAG, "block-report:" + u);
@@ -224,7 +304,7 @@ public class AntiMicu {
         }catch(Exception e){}
     }
 
-    // 5. tu kiem tra lai sau 60s (bat debug/frida tre). Phat hien la kill process.
+    // 5. tu kiem tra lai sau 60s (bat debug tre). Dinh la kill process.
     static void scheduleRecheck(final Context ctx){
         try{
             final Context app = ctx.getApplicationContext();
@@ -232,7 +312,7 @@ public class AntiMicu {
                 public void run(){
                     try{
                         if(isDebugger() || hasTracerPid() || hasFrida()){
-                            Log.i(TAG, "recheck-dirty");
+                            Log.i(TAG, "e9");
                             android.os.Process.killProcess(android.os.Process.myPid());
                         } else {
                             scheduleRecheck(app);
@@ -243,9 +323,9 @@ public class AntiMicu {
         }catch(Exception e){}
     }
 
-    // 6. native manh hon (optional): build libAntiMicu.so bang NDK roi goi o day
+    // 6. native manh hon (optional): build libAntiMicu.so bang NDK
     static{
         try{ System.loadLibrary("AntiMicu"); }catch(Exception e){}
     }
-    public static native int nativeGate(); // tra 0 = sach, !=0 = bi debug
+    public static native int nativeGate();
 }
