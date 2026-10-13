@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="utf-8">
@@ -25,6 +25,8 @@ small{color:#999}
 <option value="90">90 ngày</option>
 <option value="30000">Vĩnh viễn</option>
 </select>
+<label style="margin-top:8px;display:block">Mã máy (Device ID) - <i>tùy chọn:</i></label>
+<input id="dev" placeholder="Để trống nếu là key tự do (không khóa máy)">
 <button onclick="gen()">Tạo key</button>
 <div class="key" id="out">...</div>
 <div id="exp"></div>
@@ -138,18 +140,26 @@ var MicuKey = (function () {
     } catch (e) {}
     return Math.floor(Math.random() * 1073741824);
   }
-  // days: so ngay tu hom nay. opt {rand, now} de test determinism.
-  function issueKey(salt, days, opt) {
+  function deviceHash(salt, devId) {
+    if (!devId) return 'AAAA';
+    var h = sha256(utf8(devId.trim().toLowerCase() + salt));
+    var v = (((h[0]<<12)|(h[1]<<4)|(h[2]>>>4)) >>> 0);
+    return enc(v, 4);
+  }
+  // days: so ngay tu hom nay. devId: ma may (tuy chon). opt {rand, now} de test determinism.
+  function issueKey(salt, days, devId, opt) {
     opt = opt || {};
     var today = Math.floor((opt.now || Date.now()) / 86400000);
     var exp = today - EPOCH_DAY + Math.floor(days);
     if (exp > MAX_EXP) exp = MAX_EXP;
     if (exp < 0) exp = 0;
-    var payload = enc(exp, 3) + enc(opt.rand !== undefined ? opt.rand : rand30(), 6);
+    var flag = devId ? 'DY' : 'DN';
+    var devPart = devId ? deviceHash(salt, devId) : enc(opt.rand !== undefined ? opt.rand : rand30(), 4);
+    var payload = enc(exp, 3) + flag + devPart;
     var all = payload + sigFor(salt, payload);
     return 'MICU-' + all.slice(0,5) + '-' + all.slice(5,10) + '-' + all.slice(10,15);
   }
-  function verifyKey(salt, key, now) {
+  function verifyKey(salt, key, devId, now) {
     if (!key) return { ok: false, reason: 'empty' };
     var clean = String(key).trim().toUpperCase().replace(/[^A-Z2-7]/g, '');
     if (clean.slice(0,4) === 'MICU') clean = clean.slice(4);
@@ -158,22 +168,28 @@ var MicuKey = (function () {
     var exp = dec(payload.slice(0,3));
     if (exp < 0) return { ok: false, reason: 'bad_format' };
     if (sigFor(salt, payload) !== sig) return { ok: false, reason: 'bad_sig' };
+    var flag = payload.slice(3, 5);
+    var devPart = payload.slice(5, 9);
+    if (flag === 'DY' && devId) {
+      if (deviceHash(salt, devId) !== devPart) return { ok: false, reason: 'device_mismatch', deviceLocked: true };
+    }
     var expEnd = (EPOCH_DAY + exp + 1) * 86400000;
     if ((now || Date.now()) >= expEnd) return { ok: false, reason: 'expired' };
     var d = new Date(expEnd - 1);
-    return { ok: true, expDate: d.toISOString().slice(0,10) };
+    return { ok: true, expDate: d.toISOString().slice(0,10), deviceLocked: flag === 'DY' };
   }
-  return { issueKey: issueKey, verifyKey: verifyKey, sha256: sha256, hmac: hmac, EPOCH_DAY: EPOCH_DAY };
+  return { issueKey: issueKey, verifyKey: verifyKey, sha256: sha256, hmac: hmac, EPOCH_DAY: EPOCH_DAY, deviceHash: deviceHash };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = MicuKey;
 
 var SALT = "S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR";
 function gen(){
   var d = parseInt(document.getElementById('days').value, 10);
-  var k = MicuKey.issueKey(SALT, d);
-  var v = MicuKey.verifyKey(SALT, k);
+  var dev = (document.getElementById('dev').value || '').trim();
+  var k = MicuKey.issueKey(SALT, d, dev);
+  var v = MicuKey.verifyKey(SALT, k, dev);
   document.getElementById('out').textContent = k;
-  document.getElementById('exp').innerHTML = 'Hết hạn: <b>' + v.expDate + '</b>';
+  document.getElementById('exp').innerHTML = 'Hết hạn: <b>' + v.expDate + '</b>' + (dev ? ' (Khóa máy: ' + dev + ')' : ' (Tự do)');
 }
 function copyKey(){
   var t = document.getElementById('out').textContent;

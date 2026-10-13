@@ -117,16 +117,20 @@ bot.command('stats', (ctx) => {
   const rev = paid.reduce((s, o) => s + Number(o.paidAmount || o.price), 0);
   ctx.reply(`Don paid: ${paid.length}\nDoanh thu: ${fmtVND(rev)}\nKey da cap: ${db.keys.length}\nDon pending: ${db.orders.filter(o => o.status === 'pending').length}`);
 });
-bot.command('gen', (ctx) => { // /gen 30 ghi-chu (cap tay khi ho tro khach)
+bot.command('gen', (ctx) => { // /gen <so_ngay> [DeviceID]
   if (!isAdmin(ctx.from.id)) return;
-  const days = parseInt((ctx.message.text.split(/\s+/)[1] || '30'), 10);
-  if (!days || days < 1) return ctx.reply('Cu phap: /gen <so_ngay> [ghi chu]');
-  const key = issueKey(SALT, Math.min(days, 30000));
-  const v = verifyKey(SALT, key);
+  const parts = ctx.message.text.split(/\s+/);
+  const days = parseInt(parts[1] || '30', 10);
+  const devId = (parts[2] && parts[2].length >= 4 && !parts[2].startsWith('#')) ? parts[2].trim() : null;
+  if (!days || days < 1) {
+    return ctx.reply('Cu phap:\n/gen <so_ngay> [DeviceID]\nVD: /gen 30\nVD: /gen 30 8a3f12bc (khoa dung may nay)');
+  }
+  const key = issueKey(SALT, Math.min(days, 30000), devId);
+  const v = verifyKey(SALT, key, devId);
   const db = load();
-  db.keys.push({ key, label: `tay-${days}d`, exp: v.expDate, userId: ctx.from.id, order: 'manual', createdAt: Date.now() });
+  db.keys.push({ key, label: `tay-${days}d`, devId: devId || 'all', exp: v.expDate, userId: ctx.from.id, order: 'manual', createdAt: Date.now() });
   save(db);
-  ctx.reply(`${key}\nHet han: ${v.expDate}`);
+  ctx.reply(`${key}\nHet han: ${v.expDate}\nKhoa may: ${devId ? devId : 'Khong (tu do)'}`);
 });
 bot.command('don', async (ctx) => { // /don MUXXXXXXXX (duyet tay khi SePay loi)
   if (!isAdmin(ctx.from.id)) return;
