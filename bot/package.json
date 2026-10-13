@@ -1,0 +1,16 @@
+{
+  "name": "micu-keybot",
+  "version": "1.0.0",
+  "description": "Telegram bot ban key MicuMulti auto 24/7 (VietQR + SePay webhook)",
+  "main": "server.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "selftest": "node test/selftest.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "telegraf": "^4.16.3"
+  }
+}

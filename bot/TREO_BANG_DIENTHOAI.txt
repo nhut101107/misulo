@@ -1,0 +1,40 @@
+# TREO BOT 24/7 CHI BANG DIEN THOAI (khong can PC)
+
+## Cach 1 (khuyen dung): Render free - lam 1 lan, bot chay mai
+
+### Buoc 1: Dua code len GitHub (10 phut, lam tren Chrome dien thoai)
+1. Vao github.com dang ky / dang nhap. Tao repo moi ten `micu-keybot`, chon Private.
+2. Trong repo -> nut `Add file` -> `Upload files` -> chon file `MicuBot-upload.zip`
+   trong may (tai tu cho t gui), upload len.
+   GitHub khong tu bung zip -> sau khi upload xong, mo tung file .js ra xem
+   khong can sua gi. Neu thay cuc: dung app Termux (CH Play) go:
+     pkg install git -y
+     (giai nen zip bang app ZArchiver, cd vao thu muc, roi)
+     git init; git add .; git commit -m init
+     git remote add origin https://github.com/<ten-m>/micu-keybot.git
+     git push -u origin main
+3. Kiem tra repo co du: package.json, server.js, bot.js, src/keys.js, render.yaml.
+
+### Buoc 2: Deploy Render (5 phut)
+1. Vao render.com dang nhap bang GitHub -> New -> Blueprint -> chon repo micu-keybot -> Apply.
+2. Render doc render.yaml va hoi Environment Variables, dien:
+   BOT_TOKEN=<token BotFather>, SALT=S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR
+   BANK_CODE=MB, BANK_ACCOUNT=<stk>, ACCOUNT_NAME=<ten>
+   SEPAY_API_KEY=<key sepay>, ADMIN_IDS=<id tele cua m>
+   WEBHOOK_URL=<url render cap, dien sau khi deploy lan 1>
+3. Deploy -> mo https://<ten-app>.onrender.com/health thay {"ok":true} la song.
+4. Vao SePay dashboard -> Webhook -> them:
+   https://<ten-app>.onrender.com/sepay-webhook
+
+### Buoc 3: Test 1 don that
+Nhan /start -> mua goi re nhat -> chuyen khoan dung noi dung -> 1-3 phut bot nha key.
+
+## Cach 2 (tam): nho t chay ho tren may nay
+- May nay tat la bot tat, chi dung de ban tam hom nay.
+- Gui cho t: BOT_TOKEN + STK + ten NH. T chay bot, m ban tren dien thoai,
+  don nao SePay chua co thi m duyet tay bang lenh /don <ma>.
+- Khi nao Render xong thi bao t tat bot o day (tranh 2 bot dap 1 don).
+
+## Luu y Render free
+- 15 phut khong ai nhan thi ngu, co tin nhan / webhook la tu day (tre ~30-60s lan dau).
+- Het free 750h/thang? Goi free du cho shop nho. Dong khach thi len Starter.

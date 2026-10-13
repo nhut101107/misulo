@@ -1,0 +1,50 @@
+# Patch anti full combo (MT Manager, khong can NDK van lam duoc muc co ban)
+
+## 1. Them AntiMicu.java vao app
+# - Giong KeyGate: bien dich AntiMicu.java -> them class Lvn/micu/gate/AntiMicu; vao classes.dex
+# - Neu khong build duoc native (libAntiMicu.so) thi VAN CHAY DUOC: khoi static se catch va bo qua nativeGate().
+# - Khuyen: lam Java truoc, native de sau khi co NDK.
+
+## 2. Chen goi o Application hoac MainActivity (goi TRUOC KeyGate de may ban khong bi soi)
+# Tim: Lcom/waxmoon/ma/gp/UMApp; hoac Application subclass trong AndroidManifest (android:name=...)
+# Trong .method protected onCreate()V dau ham chen:
+#
+#    invoke-static {}, Lvn/micu/gate/AntiMicu;->run(Landroid/content/Context;)Z
+#    # -> thuc te run(Context) can context, sua lai:
+#    move-object v0, p0
+#    invoke-static {v0}, Lvn/micu/gate/AntiMicu;->run(Landroid/content/Context;)Z
+#    move-result v0
+#    if-nez v0, :pass_anti
+#    invoke-virtual {p0}, Landroid/app/Application;->getApplicationContext()Landroid/content/Context;
+#    # neu muon thoat mem khi phat hien debug: finish / exit
+#    :pass_anti
+#
+# Chu y chu ky that trong AntiMicu.java la run(Context)Z. Neu MT bao NoSuchMethod thi kiem tra lai smali:
+# .method public static run(Landroid/content/Context;)Z
+
+## 3. Tang cuong them (khong can code, lam tren MT Manager)
+# a) Xoa / doi ten lib yeu khong can thiet neu muon nhe:
+#    lib/armeabi-v7a/libpx_32.so, libx_32.so neu may m chi chay arm64 thi giu arm64, xoa 32 de giam detect.
+#    KHONG xoa libMixu.so, libMixuPanelBridge.so, libCrashGuard.so.
+# b) AndroidManifest: them android:debuggable="false", xoa uses-permission DUMP neu co.
+# c) Res: tat log: tim strings.xml "log", "debug", "report" -> khong xoa bua, chi khi chac.
+# d) Hosts block report (lam tren may root / private dns, khong phai trong APK):
+#    127.0.0.1 log-collect.haegin.kr
+#    127.0.0.1 analytics.haegin.kr
+#    127.0.0.1 abuse.playtogether.game
+#    -> test ky vi chan sai se lam game mat ket noi. Nen de che do chi LOG truoc (nhu code AntiMicu),
+#       chay 2-3 ngay xem logcat tag MicuAnti block-report:* roi moi chuyen sang DROP that.
+
+## 4. Test anti
+# - Cai app da patch, mo logcat loc "MicuAnti".
+# - Mo Frida / MT + Ptracer test: app phai tu thoat trong 3s (neu co native) hoac log frida.
+# - Chay Play Together trong multi, choi 30p-1h acc clone, xem co report loi ban khong.
+# - Nhieu truong hop ban khong den tu report mang ma tu behavior (speed/teleport qua lo) -> anti khong cuu duoc,
+#   phai giam toc do hack trong menu (speed <1.5x, khong teleport lien tuc).
+
+## 5. Build native khi co NDK (PC khac)
+# ndk-build APP_ABI="arm64-v8a armeabi-v7a"  (dat libAntiMicu.cpp vao jni/)
+# hoac cmake:
+#   cmake -DCMAKE_TOOLCHAIN_FILE=%NDK%/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-26 .
+#   cmake --build .
+# Chep libAntiMicu.so vao lib/<abi>/ trong APK roi sign lai (MT tu sign).

@@ -1,0 +1,2 @@
+MICU-AVIAF-HF73X-EKAS3
+{"ok":true,"expDate":"2026-11-12"}

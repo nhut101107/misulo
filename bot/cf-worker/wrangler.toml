@@ -1,0 +1,16 @@
+name = "micu-keybot"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "micu-keybot"
+database_id = "dien-database-id-sau-khi-tao-d1"
+
+[vars]
+BANK_CODE = "MB"
+BANK_ACCOUNT = "dien-stk"
+ACCOUNT_NAME = "dien-ten"
+PACKS = '[{"id":"7d","label":"7 ngay","days":7,"price":20000},{"id":"30d","label":"30 ngay","days":30,"price":50000},{"id":"vv","label":"Vinh vien","days":30000,"price":199000}]'
+# Secrets (dat bang dashboard hoac wrangler secret put, KHONG ghi vao day):
+# BOT_TOKEN, SALT, SEPAY_API_KEY, ADMIN_IDS, WEBHOOK_SECRET

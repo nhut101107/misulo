@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Micu Keygen (offline)</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:520px;margin:0 auto;padding:16px;background:#111;color:#eee}
+h2{margin:8px 0} .card{background:#1c1c1c;border-radius:12px;padding:14px;margin:10px 0}
+select,input,button{font-size:16px;padding:10px;border-radius:8px;border:1px solid #444;width:100%;box-sizing:border-box;margin:6px 0}
+button{background:#2e7d32;color:#fff;border:none;font-weight:bold}
+button:active{opacity:.7}
+.key{font-size:20px;font-weight:bold;letter-spacing:1px;background:#000;padding:12px;border-radius:8px;text-align:center;margin:8px 0;word-break:break-all}
+.ok{color:#4caf50}.err{color:#f44336}
+small{color:#999}
+</style>
+</head>
+<body>
+<h2>Micu Keygen <small>offline - không cần mạng</small></h2>
+<div class="card">
+<label>Gói:</label>
+<select id="days">
+<option value="7">7 ngày</option>
+<option value="30" selected>30 ngày</option>
+<option value="90">90 ngày</option>
+<option value="30000">Vĩnh viễn</option>
+</select>
+<button onclick="gen()">Tạo key</button>
+<div class="key" id="out">...</div>
+<div id="exp"></div>
+<button onclick="copyKey()">Copy key</button>
+</div>
+<div class="card">
+<label>Check key:</label>
+<input id="chk" placeholder="MICU-XXXXX-XXXXX-XXXXX">
+<button onclick="check()">Kiểm tra</button>
+<div id="res"></div>
+</div>
+<small>File này chứa SALT đẻ key - GIỮ KÍN, ai có file là tự đẻ key được.
+Nếu lộ thì đổi SALT ở bot + APK rồi build lại.</small>
+<script>
+/*__CORE__*/
+var SALT = "S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR";
+function gen(){
+  var d = parseInt(document.getElementById('days').value, 10);
+  var k = MicuKey.issueKey(SALT, d);
+  var v = MicuKey.verifyKey(SALT, k);
+  document.getElementById('out').textContent = k;
+  document.getElementById('exp').innerHTML = 'Hết hạn: <b>' + v.expDate + '</b>';
+}
+function copyKey(){
+  var t = document.getElementById('out').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(t);
+  else { var i = document.createElement('input'); i.value = t; document.body.appendChild(i); i.select(); document.execCommand('copy'); i.remove(); }
+  alert('Đã copy');
+}
+function check(){
+  var k = document.getElementById('chk').value;
+  var v = MicuKey.verifyKey(SALT, k);
+  document.getElementById('res').innerHTML = v.ok
+    ? '<b class="ok">Key sống. Hết hạn ' + v.expDate + '</b>'
+    : '<b class="err">Key lỗi: ' + v.reason + '</b>';
+}
+</script>
+</body>
+</html>

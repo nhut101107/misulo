@@ -1,0 +1,38 @@
+# Patch chen KeyGate bang MT Manager / apktool (khong can PC manh)
+# File goc: MicuMulti_uungu.apk (package com.waxmoon.ma.gp)
+# Diem chen: com.waxmoon.mobile.module.home.MainActivity.onCreate HOAC Application.onCreate
+
+### A. Doi endpoint panel cu -> panel rieng (neu muon thay han Mixu goc)
+# 1. MT Manager -> APK -> Dex Editor Plus -> tim trong classes4.dex:
+#    https://trumptg.pp.ua/panel/apiv3.php
+# 2. Replace bang URL cua m, VD: https://abc.xyz/panel/apiv3.php
+#    LUU Y: URL moi phai NGAN HON hoac BANG URL cu (46 ky tu). Neu ngan hon thi pad \0 o cuoi.
+#    URL cu dai 36? dem ky: "https://trumptg.pp.ua/panel/apiv3.php" = 36 ky tu.
+#    URL moi VD "https://m.com/p.php" (19) -> MT se tu pad, ok.
+# 3. Pubkey goc nam trong classes4.dex, tim:
+#    MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAswVks/LSl5ba5kBuvUQ0i0byv3iRxZkJmvo0PFY1f8IBI8YOF2THeSf/SBQU3o4KxUN150ivaRTkKmw2FhZgw2wGyVN8TnOjuooY72R0+8kZGRnpEEq/7WYoTuyi42mtfHQamLFH59TdPrI8yoUByo3fLmSAJ+ue9zLI+Bwb2A6W5Wn3iTYy6kkl4y14Lii+H8NvPE7G2rvQEvaWc3XpalLfbj7QACKcfnJ0uRRrix9WbBPZaZpN3hssjpVeISRExLsCNPyhGFA45Pg/55GnMrXoxkxYEkdU58QYchwnIERZDCI7kPLY2zP4zaIOh7foaGO8rNb7xD+lUpVVvOkAY9B0WjbS8xgHU1u8D646xUAJHmCVfV0NvxSdF6hdzhKvVjgcEnwbREXQcTGunpiLF3FQ9BL+0pT137bTCwliACGIq+PMgO8LgoLYOE+7Aouky6PA3L2mEFR6K6mPAQPx6BPnNuz5IwWcw20kZiFvPQgO3sCrpCf1EYuGXw32UlS5AgMBAAE=
+#    Neu giu panel cu thi KHONG can doi. Neu dung panel rieng loai don gian (KeyGate.java) thi KHONG can doi key RSA nay,
+#    chi can them lop ngoai. Khuyen dung: GIU NGUYEN Mixu + THEM KeyGate ngoai (2 lop) -> ban vua co key rieng vua tan dung menu san.
+
+### B2. Them KeyOffline (khuyen dung cho nguoi khong co server - key tu de, nhap qua file txt)
+# 1. Bien dich KeyOffline.java + AntiMicu.java vao APK (xem BUILD_OFFLINE_MTMANAGER.txt).
+#    Key tu de bang web/keygen.html hoac lenh /gen cua bot, dang MICU-XXXXX-XXXXX-XXXXX.
+# 2. Chen o DAU MainActivity.onCreate (khong can hardcode key, app tu doc file):
+#
+#    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->getApplicationContext()Landroid/content/Context;
+#    move-result-object v0
+#    invoke-static {v0}, Lvn/micu/gate/KeyOffline;->checkUserKey(Landroid/content/Context;)Z
+#    move-result v0
+#    if-nez v0, :micu_pass_key
+#    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->finish()V
+#    return-void
+#    :micu_pass_key
+#    # ... code goc tiep tuc ...
+#
+# 3. Khach nhap key: mo /sdcard/micu_key.txt (tu tao neu chua co), dan key 1 dong, luu, mo lai app.
+#    Doi key = sua file, khong can cai lai app. Doi may = xoa data app (key khoa theo may dau tien).
+
+### C. Test
+# 1. Cai APK da patch tren may ao / may phu truoc.
+# 2. Nhap key tao tu addkey.php, check logcat tag "mixu-panel-v3:" thay auth_result=ok.
+# 3. Tat mang -> mo lai app, van vao duoc trong 6h (offline_until). Het 6h bat buoc online lai.

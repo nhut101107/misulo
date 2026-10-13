@@ -1,0 +1,69 @@
+# BUILD APK MOI VỚI KEY OFFLINE (khong can server, lam tren dien thoai 10 phut)
+# Danh cho nguoi khong co hosting. Key check local + khoa theo may.
+
+## Can gi (toan app free tren CH Play)
+# 1. MT Manager (ban moi nhat)
+# 2. AIDE hoac "Java N-IDE" (de bien dich KeyOffline.java + AntiMicu.java ra dex)
+# 3. File goc MicuMulti_uungu.apk (backup truoc)
+# 4. File micu_keys.txt vua tao (20 key san)
+
+## Buoc 1: bien dich 2 file Java ra dex
+# 1. Mo AIDE -> New Project -> de ten MicuGate -> copy noi dung key/KeyOffline.java vao
+#    src/vn/micu/gate/KeyOffline.java, copy anti/AntiMicu.java vao src/vn/micu/gate/AntiMicu.java
+# 2. DOI SALT trong KeyOffline.java truoc khi build (tim dong micu-2026-doi-di-ne)
+# 3. Build -> lay file .dex trong build/ (neu AIDE ra .apk thi giai nen lay classes.dex)
+# 4. Neu AIDE loi thi dung cach 2: dung app "Java to Smali" -> paste tung file -> lay smali -> them vao APK bang MT.
+
+## Buoc 2: them dex vao APK
+# 1. MT Manager -> mo MicuMulti_uungu.apk -> Dex Editor Plus
+# 2. Nhan + -> Add Dex -> chon dex vua build (se thanh classes5.dex)
+# 3. Kiem tra co 2 class: Lvn/micu/gate/KeyOffline; va Lvn/micu/gate/AntiMicu;
+# 4. Save.
+
+## Buoc 3: chen goi check (quan trong nhat)
+# 1. Van trong MT, mo classes.dex (hoac dex chua MainActivity) -> tim:
+#    Lcom/waxmoon/mobile/module/home/MainActivity; -> mo -> tim method onCreate
+# 2. Chen o DAU ham onCreate (truoc moi dong khac):
+#
+#    move-object v0, p0
+#    invoke-static {v0}, Lvn/micu/gate/AntiMicu;->run(Landroid/content/Context;)Z
+#    move-result v0
+#    if-nez v0, :micu_pass_anti
+#    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->finish()V
+#    return-void
+#    :micu_pass_anti
+#    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->getApplicationContext()Landroid/content/Context;
+#    move-result-object v0
+#    # lay key tu o nhap: o day doc tu SharedPreferences "lastKey", mac dinh la key test dau tien
+#    const-string v1, "MICU-A1B2-C3D4"
+#    # neu m co man hinh nhap key thi thay v1 bang gia tri EditText
+#    invoke-static {v0, v1}, Lvn/micu/gate/KeyOffline;->check(Landroid/content/Context;Ljava/lang/String;)Z
+#    move-result v0
+#    if-nez v0, :micu_pass_key
+#    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->finish()V
+#    return-void
+#    :micu_pass_key
+#
+# 3. Save dex. Neu bao trung label (micu_pass_anti) thi doi ten label cho duy nhat.
+#
+# Meo nhap key cho khach (chon 1):
+#  A. De nhat: khach tao file /sdcard/micu_key.txt chua key, code doc file nay thay vi hardcode.
+#     Sua 3 dong giua thanh: doc file -> v1 = noi dung file.
+#  B. Dung luon LicenseActivity san co (org.waxmoon.play.ui.LicenseActivity) de nhap, luu vao prefs "lastKey".
+
+## Buoc 4: chep micu_keys.txt vao may
+# - Copy file micu_keys.txt vao /sdcard/micu_keys.txt de them key ma khong can rebuild (xem ham loadExternal).
+# - Key trong code (20 key demo) + key trong file cong lai.
+
+## Buoc 5: sign + cai
+# - MT tu sign khi Save APK. Chon Sign: V1+V2, dung testkey.
+# - Cai de len ban cu. Neu bao conflict thi go ban cu truoc (backup data).
+# - Test voi 2 key: 1 key dung (phai vao duoc menu), 1 key sai (phai bi finish).
+
+## Doi may cho khach
+# - Key khoa theo may dau tien (HWID lock). Khach doi may -> bao m chay lenh unbind hoac xoa data app.
+# - File prefs nam o /data/data/com.waxmoon.ma.gp/shared_prefs/micu-off.xml (can root moi xem).
+
+## Gioi han (noi thang)
+# - Key offline dich nguoc ra duoc neu ai biet doc smali. Du cho ban le, khong chong duoc tho reverse.
+# - Muon chat hon thi sau nay thue hosting 50k/thang roi chuyen sang KeyGate online (da co san trong thu muc key/).

@@ -1,0 +1,49 @@
+# TREO BOT 24/7 TREN CLOUDFLARE WORKERS (free, khong ngu) - LAM BANG DIEN THOAI
+
+## Tai sao Cloudflare ma khong phai GitHub / Render
+- GitHub KHONG chay duoc bot (Pages chi web tinh, Actions gioi han phut).
+- Render free tu ngu sau 15 phut vang (khoe day cham 30-60s).
+- Cloudflare Workers free: 100.000 request/ngay, KHONG ngu, nhanh. Bot tele + webhook
+  SePay chay ngon. Ban nay (cf-worker/) viet rieng cho Workers: grammY + D1.
+
+## Buoc 1: Dua code len GitHub (Chrome dien thoai)
+1. github.com -> repo private `micu-keybot` (da co tu guide truoc thi dung lai).
+2. Up file `MicuBot-upload.zip` (ban moi, co thu muc cf-worker/). Neu dung Termux:
+   git add .; git commit -m worker; git push (bo qua node_modules, .env - da co .gitignore).
+3. Kiem tra repo co: cf-worker/worker.js, wrangler.toml, schema.sql.
+
+## Buoc 2: Tao Worker (dash.cloudflare.com tren dien thoai)
+1. Dang ky/nhap Cloudflare -> Workers & Pages -> Create -> Connect to Git ->
+   chon repo micu-keybot -> Configure:
+   - Root directory: cf-worker
+   - Build command: (de trong)
+   - Deploy command: npx wrangler deploy (mac dinh la duoc)
+2. Lan deploy dau co the bao thieu D1 -> cu deploy, lam tiep buoc 3 roi Redeploy.
+
+## Buoc 3: Tao database D1 (mien phi)
+1. Workers & Pages -> D1 -> Create database ten `micu-keybot` -> copy Database ID.
+2. Vao database -> Console -> paste toan bo file cf-worker/schema.sql -> Run
+   (tao 2 bang orders, keys).
+3. Ve Worker -> Settings -> Bindings -> Add D1 -> Variable name: DB ->
+   chon database micu-keybot -> Save -> Redeploy.
+
+## Buoc 4: Cau hinh bien + secret (Worker -> Settings -> Variables)
+Vars thuong: BANK_CODE=MB, BANK_ACCOUNT=<stk>, ACCOUNT_NAME=<ten>,
+  PACKS=<copy dong PACKS trong .env.example, sua gia cua m>
+Secrets (Add secret, khong hien lai): BOT_TOKEN, SALT=S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR,
+  SEPAY_API_KEY, ADMIN_IDS=<id tele>, WEBHOOK_SECRET=<tu dat 1 chuoi>
+Xong -> Save -> Redeploy.
+
+## Buoc 5: Bat webhook (1 lan, mo tren dien thoai)
+Mo: https://<ten-worker>.workers.dev/setup?s=<WEBHOOK_SECRET>
+Phai thay dong `webhook -> .../telegram/...` la bot song.
+Nhan /start vao bot test menu.
+
+## Buoc 6: SePay
+Dashboard SePay -> Webhook -> them: https://<ten-worker>.workers.dev/sepay-webhook
+Test 1 don that (goi re nhat, chuyen dung noi dung) -> 1-3 phut bot nha key.
+
+## Bao tri
+- Doi gia/goi: sua bien PACKS -> Save (khong can deploy lai).
+- Xem don/key: D1 -> console: SELECT * FROM orders ORDER BY created_at DESC LIMIT 20;
+- Tat bot tam o may cua t sau khi Worker chay (tranh 2 bot dap 1 don).

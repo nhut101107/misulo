@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: micu-keybot
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: MODE
+        value: webhook
+      - key: BOT_TOKEN
+        sync: false
+      - key: SALT
+        sync: false
+      - key: BANK_CODE
+        value: MB
+      - key: BANK_ACCOUNT
+        sync: false
+      - key: ACCOUNT_NAME
+        sync: false
+      - key: SEPAY_API_KEY
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: WEBHOOK_SECRET
+        generateValue: true
+      - key: PACKS
+        value: '[{"id":"7d","label":"7 ngay","days":7,"price":20000},{"id":"30d","label":"30 ngay","days":30,"price":50000},{"id":"vv","label":"Vinh vien","days":30000,"price":199000}]'

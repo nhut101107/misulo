@@ -1,0 +1,4 @@
+{
+  "MICU-AAAA-1111": {"exp": "2026-12-31 23:59:59", "device": "", "banned": false, "note": "test 1"},
+  "MICU-BBBB-2222": {"exp": "2025-10-20 00:00:00", "device": "", "banned": false, "note": "het han demo"}
+}
