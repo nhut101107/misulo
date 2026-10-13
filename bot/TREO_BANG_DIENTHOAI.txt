@@ -1,40 +1,93 @@
-# TREO BOT 24/7 CHI BANG DIEN THOAI (khong can PC)
+# HƯỚNG DẪN TREO BOT MNHUT VIP 24/7 KHÔNG CẦN DÙNG PC (100% TRÊN ĐIỆN THOẠI)
 
-## Cach 1 (khuyen dung): Render free - lam 1 lan, bot chay mai
+---
 
-### Buoc 1: Dua code len GitHub (10 phut, lam tren Chrome dien thoai)
-1. Vao github.com dang ky / dang nhap. Tao repo moi ten `micu-keybot`, chon Private.
-2. Trong repo -> nut `Add file` -> `Upload files` -> chon file `MicuBot-upload.zip`
-   trong may (tai tu cho t gui), upload len.
-   GitHub khong tu bung zip -> sau khi upload xong, mo tung file .js ra xem
-   khong can sua gi. Neu thay cuc: dung app Termux (CH Play) go:
-     pkg install git -y
-     (giai nen zip bang app ZArchiver, cd vao thu muc, roi)
-     git init; git add .; git commit -m init
-     git remote add origin https://github.com/<ten-m>/micu-keybot.git
-     git push -u origin main
-3. Kiem tra repo co du: package.json, server.js, bot.js, src/keys.js, render.yaml.
+## LỰA CHỌN 1: DÙNG RENDER.COM (MIỄN PHÍ 100% - LÀM TRÊN TRÌNH DUYỆT ĐIỆN THOẠI)
 
-### Buoc 2: Deploy Render (5 phut)
-1. Vao render.com dang nhap bang GitHub -> New -> Blueprint -> chon repo micu-keybot -> Apply.
-2. Render doc render.yaml va hoi Environment Variables, dien:
-   BOT_TOKEN=<token BotFather>, SALT=S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR
-   BANK_CODE=MB, BANK_ACCOUNT=<stk>, ACCOUNT_NAME=<ten>
-   SEPAY_API_KEY=<key sepay>, ADMIN_IDS=<id tele cua m>
-   WEBHOOK_URL=<url render cap, dien sau khi deploy lan 1>
-3. Deploy -> mo https://<ten-app>.onrender.com/health thay {"ok":true} la song.
-4. Vao SePay dashboard -> Webhook -> them:
-   https://<ten-app>.onrender.com/sepay-webhook
+Ưu điểm: Không tốn tiền, chỉ cần thao tác bằng Safari hoặc Chrome trên điện thoại.
+Thời gian cài: ~5 phút.
 
-### Buoc 3: Test 1 don that
-Nhan /start -> mua goi re nhat -> chuyen khoan dung noi dung -> 1-3 phut bot nha key.
+### Bước 1: Chuẩn bị repo GitHub
+Code sẽ được đẩy lên repo GitHub của sếp (`nhut101107/misulo`).
 
-## Cach 2 (tam): nho t chay ho tren may nay
-- May nay tat la bot tat, chi dung de ban tam hom nay.
-- Gui cho t: BOT_TOKEN + STK + ten NH. T chay bot, m ban tren dien thoai,
-  don nao SePay chua co thi m duyet tay bang lenh /don <ma>.
-- Khi nao Render xong thi bao t tat bot o day (tranh 2 bot dap 1 don).
+### Bước 2: Tạo ứng dụng trên Render
+1. Mở trình duyệt điện thoại vào: https://render.com
+2. Bấm **Get Started** hoặc **Sign in** -> Chọn **Sign in with GitHub**.
+3. Tại giao diện chính (Dashboard), bấm nút **New +** (góc trên bên phải) -> Chọn **Web Service**.
+4. Chọn repo `nhut101107/misulo` (hoặc dán link repo vào nếu private).
+5. Điền thông tin cấu hình:
+   - **Name**: `mnhut-vip-bot`
+   - **Region**: Singapore (gần Việt Nam, mạng nhanh nhất)
+   - **Branch**: `main`
+   - **Runtime**: `Node`
+   - **Build Command**: `npm install`
+   - **Start Command**: `node server.js`
+   - **Instance Type**: Chọn **Free** ($0/month)
+6. Kéo xuống phần **Environment Variables** (Biến môi trường) -> Bấm **Add Environment Variable** để thêm từng dòng:
+   - `BOT_TOKEN`: `7352828711:AAHQdy_fhERL8XJq0Ko59TLrLkKoEh0VTuo`
+   - `SALT`: `S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR`
+   - `ADMIN_IDS`: `5992662564`
+   - `BANK_CODE`: `MB`
+   - `BANK_ACCOUNT`: `17363999999999`
+   - `ACCOUNT_NAME`: `BUI MINH NHUT`
+   - `MODE`: `polling`
+7. Bấm **Deploy Web Service**. Đợi khoảng 2-3 phút thấy báo `Live` màu xanh là bot đã hoạt động!
 
-## Luu y Render free
-- 15 phut khong ai nhan thi ngu, co tin nhan / webhook la tu day (tre ~30-60s lan dau).
-- Het free 750h/thang? Goi free du cho shop nho. Dong khach thi len Starter.
+### Bước 3: Giữ cho Bot thức 24/24 (Mẹo chống ngủ miễn phí)
+Gói Free của Render sẽ tự ngủ sau 15 phút nếu không có ai truy cập web. Để bot thức liên tục 24/7 không bao giờ ngủ:
+1. Copy đường link web mà Render vừa cấp (ví dụ: `https://mnhut-vip-bot.onrender.com`).
+2. Vào trang web miễn phí: https://uptimerobot.com (hoặc https://cron-job.org).
+3. Đăng ký tài khoản bằng email trên điện thoại.
+4. Bấm **Add New Monitor**:
+   - **Monitor Type**: Chọn `HTTP(s)`
+   - **Friendly Name**: `Mnhut Bot Keep Alive`
+   - **URL (or IP)**: Dán link Render kèm đuôi `/health` (Ví dụ: `https://mnhut-vip-bot.onrender.com/health`)
+   - **Monitoring Interval**: 5 minutes (5 phút ping 1 lần)
+5. Bấm **Create Monitor**. Xong! UptimeRobot sẽ liên tục gõ cửa mỗi 5 phút, bot Render của sếp sẽ THỨC 24/7/365 hoàn toàn miễn phí!
+
+---
+
+## LỰA CHỌN 2: DÙNG KOYEB.COM (MIỄN PHÍ 100% - KHÔNG BỊ NGỦ)
+
+Ưu điểm: Gói Free của Koyeb không tự động tắt dịch vụ như Render.
+1. Mở điện thoại vào: https://www.koyeb.com
+2. Đăng ký bằng GitHub.
+3. Bấm **Create App** -> Chọn **GitHub** -> Chọn repo `nhut101107/misulo`.
+4. Điền các biến môi trường (Environment Variables) y hệt như Render ở trên.
+5. Bấm **Deploy** -> Koyeb tự chạy bot 24/7.
+
+---
+
+## LỰA CHỌN 3: CLOUD VPS VIỆT NAM (30k - 50k/THÁNG) - KHUYÊN DÙNG SỐ 1 KHI LÀM ĂN LÂU DÀI
+
+Nếu sếp muốn bán key nghiêm túc, dữ liệu đơn hàng và số dư ví của khách không bao giờ sợ mất hay reset thì phương án thuê VPS cỏ là đỉnh nhất.
+
+### Cách quản lý VPS 100% bằng điện thoại:
+1. Thuê 1 con VPS Ubuntu rẻ nhất ở VN (Vietnix, CloudFly, TinoHost, vHost... giá từ 30.000đ - 50.000đ/tháng, quét mã QR thanh toán).
+2. Nhà cung cấp gửi cho sếp: **IP**, **User** (thường là `root`), và **Mật khẩu**.
+3. Trên điện thoại (Android hoặc iPhone), vào App Store / CH Play tải app **Termius** (miễn phí).
+4. Mở Termius -> Bấm dấu `+` -> Chọn `New Host`:
+   - Hostname: Nhập địa chỉ IP
+   - Username: `root`
+   - Password: Nhập mật khẩu
+   - Bấm Save rồi bấm kết nối.
+5. Trong màn hình đen của Termius, sếp chỉ cần dán lệnh cài đặt 1-click này:
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs git && npm install -g pm2
+   git clone https://github.com/nhut101107/misulo.git mnhutbot
+   cd mnhutbot/MicuBot
+   npm install
+   pm2 start server.js --name mnhut-vip
+   pm2 save
+   pm2 startup
+   ```
+6. Xong! Bot sẽ chạy vĩnh viễn trong VPS. Sếp tắt app Termius, tắt nguồn điện thoại thì bot vẫn bán key và duyệt tiền bình thường suốt 24/7!
+
+---
+
+## LỰA CHỌN 4: TẬN DỤNG ĐIỆN THOẠI ANDROID CŨ (NẾU CÓ MÁY PHỤ Ở NHÀ)
+Nếu ở nhà có máy Android phụ vứt xó:
+1. Tải app **Termux** từ F-Droid.
+2. Gõ lệnh: `pkg update && pkg install nodejs git -y`
+3. Tải code về chạy: `node server.js`
+4. Cắm sạc điện thoại kết nối wifi để ở góc nhà là thành 1 con server mini miễn phí!

@@ -1,13 +1,31 @@
-// Web server: Telegram webhook (MODE=webhook) + SePay webhook + health check.
+// Web server: Telegram webhook (MODE=webhook) + payOS webhook + SePay webhook + health check.
 require('dotenv').config();
 const express = require('express');
 const { bot, fulfillOrder } = require('./bot');
+const { isPayOSConfigured, verifyWebhook } = require('./src/payos');
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.get('/health', (req, res) => res.json({ ok: true, time: Date.now() }));
 
-// SePay webhook: dang ky URL https://domain-cua-m/sepay-webhook trong dashboard SePay.
+// 1. payOS webhook: dang ky URL https://domain-cua-m/payos-webhook tren dashboard payos.vn
+app.post('/payos-webhook', async (req, res) => {
+  try {
+    if (!isPayOSConfigured()) {
+      return res.status(400).json({ success: false, message: 'payOS not configured' });
+    }
+    const webhookData = await verifyWebhook(req.body);
+    console.log('[payOS Webhook] Nhan thanh toan:', webhookData.orderCode, 'So tien:', webhookData.amount);
+
+    const r = await fulfillOrder(webhookData.orderCode, webhookData.amount);
+    return res.json({ success: true, ...r });
+  } catch (e) {
+    console.error('[payOS Webhook Error]:', e.message);
+    return res.status(400).json({ success: false, error: e.message });
+  }
+});
+
+// 2. SePay webhook: dang ky URL https://domain-cua-m/sepay-webhook trong dashboard SePay.
 // Header: Authorization: Apikey <SEPAY_API_KEY>. Body co content + transferAmount.
 app.post('/sepay-webhook', async (req, res) => {
   try {
@@ -17,9 +35,11 @@ app.post('/sepay-webhook', async (req, res) => {
     }
     const b = req.body || {};
     const content = String(b.content || b.description || '');
-    const amount = Number(b.transferAmount || 0);
-    const m = content.toUpperCase().replace(/[^A-Z0-9]/g, ' ').match(/MU[A-Z0-9]{8}/);
-    if (!m) return res.json({ success: true, message: 'no_order_code' });
+    const cleanContent = content.toUpperCase().replace(/[^A-Z0-9]/g, ' ');
+    const m = cleanContent.match(/MN[A-Z0-9]{8}/) || cleanContent.match(/MU[A-Z0-9]{8}/) || cleanContent.match(/NAP\d+[A-Z0-9]+/);
+    if (!m) return res.json({ success: true, message: 'no_order_or_topup_code' });
+    
+    const amount = Number(b.transferAmount || b.amount || 0);
     const r = await fulfillOrder(m[0], amount);
     return res.json({ success: true, ...r });
   } catch (e) {
@@ -33,7 +53,7 @@ const PORT = process.env.PORT || 3000;
 
 async function main() {
   if (MODE === 'webhook') {
-    const secret = process.env.WEBHOOK_SECRET || 'micu';
+    const secret = process.env.WEBHOOK_SECRET || 'mnhut';
     const url = (process.env.WEBHOOK_URL || '').replace(/\/$/, '') + '/telegram/' + secret;
     app.use(bot.webhookCallback('/telegram/' + secret));
     app.listen(PORT, async () => {

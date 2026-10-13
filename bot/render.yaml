@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: micu-keybot
+    name: mnhut-keybot
     runtime: node
     buildCommand: npm install
     startCommand: npm start

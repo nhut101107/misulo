@@ -1,4 +1,4 @@
-// HMAC key engine - DUNG CHUNG THUAT TOAN VOI KeyOffline.java (Android).
+// HMAC key engine - DUNG CHUNG THUAT TOAN VOI KeyOffline.java (Android MNHUT MOD).
 const crypto = require('crypto');
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; // base32 RFC4648, khong padding
@@ -22,9 +22,9 @@ function dec(str) {
   return n;
 }
 
-function sigFor(salt, payload9) {
+function sigFor(salt, payload9, tag = 'MNHUT') {
   const h = crypto.createHmac('sha256', Buffer.from(salt, 'utf8'))
-    .update(Buffer.from('MICU|' + payload9, 'utf8')).digest();
+    .update(Buffer.from(tag + '|' + payload9, 'utf8')).digest();
   const v = (((h[0] << 22) | (h[1] << 14) | (h[2] << 6) | (h[3] >>> 2)) >>> 0);
   return enc(v, 6);
 }
@@ -48,19 +48,24 @@ function issueKey(salt, durationDays, deviceId = null) {
   const flag = deviceId ? 'DY' : 'DN';
   const devPart = deviceId ? deviceHash(salt, deviceId) : enc(crypto.randomInt(0, 1 << 20), 4);
   const payload = enc(exp, 3) + flag + devPart;
-  const all = payload + sigFor(salt, payload);
-  return 'MICU-' + all.slice(0, 5) + '-' + all.slice(5, 10) + '-' + all.slice(10, 15);
+  const all = payload + sigFor(salt, payload, 'MNHUT');
+  return 'MNHUT-' + all.slice(0, 5) + '-' + all.slice(5, 10) + '-' + all.slice(10, 15);
 }
 
 function verifyKey(salt, key, deviceId = null) {
   if (!key) return { ok: false, reason: 'empty' };
   let clean = String(key).trim().toUpperCase().replace(/[^A-Z2-7]/g, '');
-  if (clean.startsWith('MICU')) clean = clean.slice(4); // bo prefix hien thi
+  if (clean.startsWith('MNHUT')) clean = clean.slice(5);
+  else if (clean.startsWith('MICU')) clean = clean.slice(4);
   if (clean.length !== 15) return { ok: false, reason: 'bad_format' };
+  
   const payload = clean.slice(0, 9), sig = clean.slice(9, 15);
   const exp = dec(payload.slice(0, 3));
   if (exp < 0) return { ok: false, reason: 'bad_format' };
-  if (sigFor(salt, payload) !== sig) return { ok: false, reason: 'bad_sig' };
+
+  const sigMnhut = sigFor(salt, payload, 'MNHUT');
+  const sigMicu = sigFor(salt, payload, 'MICU');
+  if (sig !== sigMnhut && sig !== sigMicu) return { ok: false, reason: 'bad_sig' };
 
   const flag = payload.slice(3, 5);
   const devPart = payload.slice(5, 9);
@@ -82,7 +87,7 @@ function verifyKey(salt, key, deviceId = null) {
 
 function orderCode() {
   const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  let s = 'MU';
+  let s = 'MN';
   const b = crypto.randomBytes(8);
   for (let i = 0; i < 8; i++) s += abc[b[i] % abc.length];
   return s;

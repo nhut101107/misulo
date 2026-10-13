@@ -1,49 +1,130 @@
-# TREO BOT 24/7 TREN CLOUDFLARE WORKERS (free, khong ngu) - LAM BANG DIEN THOAI
+# HƯỚNG DẪN TREO BOT MNHUT VIP 24/7 TRÊN CLOUDFLARE WORKERS (100% FREE, KHÔNG NGỦ)
 
-## Tai sao Cloudflare ma khong phai GitHub / Render
-- GitHub KHONG chay duoc bot (Pages chi web tinh, Actions gioi han phut).
-- Render free tu ngu sau 15 phut vang (khoe day cham 30-60s).
-- Cloudflare Workers free: 100.000 request/ngay, KHONG ngu, nhanh. Bot tele + webhook
-  SePay chay ngon. Ban nay (cf-worker/) viet rieng cho Workers: grammY + D1.
+Phương pháp này thao tác 100% trên trình duyệt điện thoại (Safari/Chrome), không cần dùng máy tính.
 
-## Buoc 1: Dua code len GitHub (Chrome dien thoai)
-1. github.com -> repo private `micu-keybot` (da co tu guide truoc thi dung lai).
-2. Up file `MicuBot-upload.zip` (ban moi, co thu muc cf-worker/). Neu dung Termux:
-   git add .; git commit -m worker; git push (bo qua node_modules, .env - da co .gitignore).
-3. Kiem tra repo co: cf-worker/worker.js, wrangler.toml, schema.sql.
+---
 
-## Buoc 2: Tao Worker (dash.cloudflare.com tren dien thoai)
-1. Dang ky/nhap Cloudflare -> Workers & Pages -> Create -> Connect to Git ->
-   chon repo micu-keybot -> Configure:
-   - Root directory: cf-worker
-   - Build command: (de trong)
-   - Deploy command: npx wrangler deploy (mac dinh la duoc)
-2. Lan deploy dau co the bao thieu D1 -> cu deploy, lam tiep buoc 3 roi Redeploy.
+### BƯỚC 1: ĐĂNG KÝ / ĐĂNG NHẬP CLOUDFLARE
+1. Mở trình duyệt điện thoại vào: https://dash.cloudflare.com
+2. Đăng ký tài khoản (miễn phí) hoặc đăng nhập nếu đã có.
 
-## Buoc 3: Tao database D1 (mien phi)
-1. Workers & Pages -> D1 -> Create database ten `micu-keybot` -> copy Database ID.
-2. Vao database -> Console -> paste toan bo file cf-worker/schema.sql -> Run
-   (tao 2 bang orders, keys).
-3. Ve Worker -> Settings -> Bindings -> Add D1 -> Variable name: DB ->
-   chon database micu-keybot -> Save -> Redeploy.
+---
 
-## Buoc 4: Cau hinh bien + secret (Worker -> Settings -> Variables)
-Vars thuong: BANK_CODE=MB, BANK_ACCOUNT=<stk>, ACCOUNT_NAME=<ten>,
-  PACKS=<copy dong PACKS trong .env.example, sua gia cua m>
-Secrets (Add secret, khong hien lai): BOT_TOKEN, SALT=S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR,
-  SEPAY_API_KEY, ADMIN_IDS=<id tele>, WEBHOOK_SECRET=<tu dat 1 chuoi>
-Xong -> Save -> Redeploy.
+### BƯỚC 2: TẠO DATABASE D1 (LƯU TRỮ KEY & ĐƠN HÀNG MIỄN PHÍ)
+1. Trong menu Cloudflare, bấm vào **Workers & Pages** -> Chọn **D1 SQL Database**.
+2. Bấm nút **Create Database** -> Đặt tên: `mnhut-keybot` -> Bấm **Create**.
+3. Bấm vào database vừa tạo -> Chuyển sang tab **Console**.
+4. Dán toàn bộ nội dung tạo bảng sau đây vào ô SQL rồi bấm **Execute**:
 
-## Buoc 5: Bat webhook (1 lan, mo tren dien thoai)
-Mo: https://<ten-worker>.workers.dev/setup?s=<WEBHOOK_SECRET>
-Phai thay dong `webhook -> .../telegram/...` la bot song.
-Nhan /start vao bot test menu.
+```sql
+CREATE TABLE IF NOT EXISTS orders (
+  code TEXT PRIMARY KEY,
+  pack_id TEXT,
+  label TEXT,
+  days INTEGER,
+  price INTEGER,
+  user_id INTEGER,
+  username TEXT,
+  status TEXT,
+  created_at INTEGER,
+  paid_at INTEGER,
+  paid_amount INTEGER
+);
 
-## Buoc 6: SePay
-Dashboard SePay -> Webhook -> them: https://<ten-worker>.workers.dev/sepay-webhook
-Test 1 don that (goi re nhat, chuyen dung noi dung) -> 1-3 phut bot nha key.
+CREATE TABLE IF NOT EXISTS keys (
+  key TEXT PRIMARY KEY,
+  label TEXT,
+  exp TEXT,
+  user_id INTEGER,
+  order_code TEXT,
+  hwid TEXT,
+  banned INTEGER DEFAULT 0,
+  created_at INTEGER
+);
 
-## Bao tri
-- Doi gia/goi: sua bien PACKS -> Save (khong can deploy lai).
-- Xem don/key: D1 -> console: SELECT * FROM orders ORDER BY created_at DESC LIMIT 20;
-- Tat bot tam o may cua t sau khi Worker chay (tranh 2 bot dap 1 don).
+CREATE TABLE IF NOT EXISTS users (
+  user_id INTEGER PRIMARY KEY,
+  username TEXT,
+  balance INTEGER DEFAULT 0,
+  total_deposit INTEGER DEFAULT 0,
+  banned INTEGER DEFAULT 0,
+  created_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS topups (
+  code TEXT PRIMARY KEY,
+  user_id INTEGER,
+  username TEXT,
+  amount INTEGER,
+  status TEXT,
+  created_at INTEGER,
+  approved_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS giftcodes (
+  code TEXT PRIMARY KEY,
+  amount INTEGER,
+  created_by INTEGER,
+  used_by INTEGER,
+  used_at INTEGER,
+  created_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+```
+
+---
+
+### BƯỚC 3: TẠO WORKER VÀ LIÊN KẾT GITHUB
+1. Trong mục **Workers & Pages** -> Bấm **Create Application** -> Chọn **Pages** hoặc **Workers** (Connect to Git).
+2. Chọn tài khoản GitHub và chọn repo: `nhut101107/misulo`.
+3. Cấu hình:
+   - **Root directory**: `MicuBot/cf-worker` (hoặc thư mục chứa worker.js)
+   - Bấm **Deploy**.
+
+---
+
+### BƯỚC 4: LIÊN KẾT DATABASE VÀ ĐIỀN BIẾN MÔI TRƯỜNG
+1. Vào Worker vừa tạo -> Bấm vào tab **Settings**:
+2. **Gắn Database D1:**
+   - Kéo xuống mục **Bindings** -> Bấm **Add** -> Chọn **D1 database binding**.
+   - **Variable name**: Điền chữ `DB` (viết hoa).
+   - **D1 Database**: Chọn database `mnhut-keybot` vừa tạo ở Bước 2.
+   - Bấm **Save**.
+3. **Thêm Biến Môi Trường (Variables & Secrets):**
+   - Kéo đến mục **Variables and Secrets** -> Bấm **Add**:
+     - `BOT_TOKEN`: `7352828711:AAHQdy_fhERL8XJq0Ko59TLrLkKoEh0VTuo`
+     - `ADMIN_IDS`: `5992662564`
+     - `SALT`: `S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR`
+     - `BANK_CODE`: `MB`
+     - `BANK_ACCOUNT`: `17363999999999`
+     - `ACCOUNT_NAME`: `BUI MINH NHUT`
+     - `WEBHOOK_SECRET`: `mnhutvip`
+     - `SEPAY_API_KEY`: (nếu có dùng SePay thì điền, không thì bỏ qua)
+   - Bấm **Deploy / Save and Deploy**.
+
+---
+
+### BƯỚC 5: KÍCH HOẠT BOT TELEGRAM (BẤM 1 LINK LÀ XONG)
+Worker sẽ cấp cho sếp 1 đường link (Ví dụ: `https://mnhut-keybot.workers.dev`).
+Sếp chỉ cần mở trình duyệt trên điện thoại và truy cập link sau:
+
+👉 `https://<ten-worker-cua-sep>.workers.dev/setup?s=mnhutvip`
+
+Nếu màn hình hiện:
+```json
+{
+  "hookUrl": "https://.../telegram/mnhutvip",
+  "telegramResponse": { "ok": true, "result": true, "description": "Webhook was set" }
+}
+```
+=> **CHÚC MỪNG! Bot đã chính thức chạy 24/7 trên Cloudflare!**
+
+---
+
+### BƯỚC 6: KIỂM TRA BOT TRÊN TELEGRAM
+1. Mở Telegram vào bot của sếp -> Gõ `/start` -> Bot lập tức xổ menu 100% nút bấm cực đẹp.
+2. Gõ `/admin` -> Mở bảng điều khiển quản trị duyệt tiền, tạo key, quản lý ví và giftcode!
