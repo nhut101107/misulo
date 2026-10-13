@@ -17,8 +17,18 @@
 ### B2. Them KeyOffline (khuyen dung cho nguoi khong co server - key tu de, nhap qua file txt)
 # 1. Bien dich KeyOffline.java + AntiMicu.java vao APK (xem BUILD_OFFLINE_MTMANAGER.txt).
 #    Key tu de bang web/keygen.html hoac lenh /gen cua bot, dang MICU-XXXXX-XXXXX-XXXXX.
-# 2. Chen o DAU MainActivity.onCreate (khong can hardcode key, app tu doc file):
+# 2. Chen ngay SAU lenh invoke-super onCreate (khong can hardcode key, app tu doc file):
+#    LUU Y QUAN TRONG: Bat buoc chen SAU lenh invoke-super {p0, ...}, L.../Activity;->onCreate(...)V.
+#    Neu chen truoc super.onCreate se bi Android danh crash loi SuperNotCalledException.
 #
+#    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->getApplicationContext()Landroid/content/Context;
+#    move-result-object v0
+#    invoke-static {v0}, Lvn/micu/gate/AntiMicu;->run(Landroid/content/Context;)Z
+#    move-result v0
+#    if-nez v0, :micu_pass_anti
+#    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->finish()V
+#    return-void
+#    :micu_pass_anti
 #    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->getApplicationContext()Landroid/content/Context;
 #    move-result-object v0
 #    invoke-static {v0}, Lvn/micu/gate/KeyOffline;->checkUserKey(Landroid/content/Context;)Z
@@ -29,7 +39,9 @@
 #    :micu_pass_key
 #    # ... code goc tiep tuc ...
 #
-# 3. Khach nhap key: mo /sdcard/micu_key.txt (tu tao neu chua co), dan key 1 dong, luu, mo lai app.
+# 3. Khach nhap key: tao file micu_key.txt, dan key 1 dong, luu, mo lai app:
+#    - Uu tien (Android 11+ khong can cap quyen): /sdcard/Android/data/com.waxmoon.ma.gp/files/micu_key.txt
+#    - Hoac duong dan truyen thong: /sdcard/micu_key.txt (hoac /sdcard/Download/micu_key.txt)
 #    Doi key = sua file, khong can cai lai app. Doi may = xoa data app (key khoa theo may dau tien).
 
 ### C. Test

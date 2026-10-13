@@ -148,22 +148,41 @@ public class KeyOffline {
         return verify(ctx, userKey)==0;
     }
 
-    // Doc key khach nhap: file /sdcard/micu_key.txt (dong dau tien, dan key vao).
-    // Khach "nhap key vo menu" = mo file nay bang app quan ly file, dan key, luu, mo lai app.
-    // Khong can sua UI, khong can rebuild khi doi key.
-    public static String getUserKey(){
-        String[] paths = {"/sdcard/micu_key.txt", "/sdcard/Download/micu_key.txt"};
+    // Doc key khach nhap:
+    // 1. /sdcard/Android/data/<package>/files/micu_key.txt (Khong can quyen, Android 11+ doc 100%)
+    // 2. /sdcard/micu_key.txt va /sdcard/Download/micu_key.txt
+    public static String getUserKey(Context ctx){
+        java.util.List<String> paths = new java.util.ArrayList<String>();
+        try{
+            if(ctx != null){
+                File ext = ctx.getExternalFilesDir(null);
+                if(ext != null) paths.add(new File(ext, "micu_key.txt").getAbsolutePath());
+                paths.add("/sdcard/Android/data/" + ctx.getPackageName() + "/files/micu_key.txt");
+                paths.add("/storage/emulated/0/Android/data/" + ctx.getPackageName() + "/files/micu_key.txt");
+            }
+        }catch(Exception e){}
+        paths.add("/sdcard/micu_key.txt");
+        paths.add("/storage/emulated/0/micu_key.txt");
+        paths.add("/sdcard/Download/micu_key.txt");
+        paths.add("/storage/emulated/0/Download/micu_key.txt");
+
         for(String p : paths){
             try{
-                BufferedReader r = new BufferedReader(new FileReader(new File(p)));
-                String l = r.readLine(); r.close();
-                if(l != null && !l.trim().isEmpty()) return l.trim();
+                File f = new File(p);
+                if(f.exists()){
+                    BufferedReader r = new BufferedReader(new FileReader(f));
+                    String l = r.readLine(); r.close();
+                    if(l != null && !l.trim().isEmpty()) return l.trim();
+                }
             }catch(Exception e){}
         }
         return "";
     }
+    public static String getUserKey(){
+        return getUserKey(null);
+    }
     public static boolean checkUserKey(Context ctx){
-        return check(ctx, getUserKey());
+        return check(ctx, getUserKey(ctx));
     }
 
     // Reset may khi khach doi dien thoai: goi ham nay 1 lan (gan vao nut an / lenh dac biet), hoac xoa data app.

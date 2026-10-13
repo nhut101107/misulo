@@ -23,7 +23,8 @@
 ## Buoc 3: chen goi check (quan trong nhat)
 # 1. Van trong MT, mo classes.dex (hoac dex chua MainActivity) -> tim:
 #    Lcom/waxmoon/mobile/module/home/MainActivity; -> mo -> tim method onCreate
-# 2. Chen o DAU ham onCreate (truoc moi dong khac):
+# 2. Chen ngay SAU lenh invoke-super onCreate:
+#    (Bat buoc dat sau invoke-super {p0, ...}, L.../Activity;->onCreate(...)V de tranh crash SuperNotCalledException)
 #
 #    move-object v0, p0
 #    invoke-static {v0}, Lvn/micu/gate/AntiMicu;->run(Landroid/content/Context;)Z
@@ -34,10 +35,8 @@
 #    :micu_pass_anti
 #    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->getApplicationContext()Landroid/content/Context;
 #    move-result-object v0
-#    # lay key tu o nhap: o day doc tu SharedPreferences "lastKey", mac dinh la key test dau tien
-#    const-string v1, "MICU-A1B2-C3D4"
-#    # neu m co man hinh nhap key thi thay v1 bang gia tri EditText
-#    invoke-static {v0, v1}, Lvn/micu/gate/KeyOffline;->check(Landroid/content/Context;Ljava/lang/String;)Z
+#    # Goi checkUserKey tu dong quet file txt (ho tro ca Android 11+ khong can quyen storage):
+#    invoke-static {v0}, Lvn/micu/gate/KeyOffline;->checkUserKey(Landroid/content/Context;)Z
 #    move-result v0
 #    if-nez v0, :micu_pass_key
 #    invoke-virtual {p0}, Lcom/waxmoon/mobile/module/home/MainActivity;->finish()V

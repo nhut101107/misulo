@@ -142,8 +142,21 @@ public class AntiMicu {
     }
     static boolean verifyLib(Context ctx){
         try{
-            File lib = new File(ctx.getApplicationInfo().nativeLibraryDir + "/" + dx(S_LIB) + ".so");
-            return lib.exists() && lib.length() >= MIXU_MIN_SIZE;
+            String libDir = ctx.getApplicationInfo().nativeLibraryDir;
+            File dir = new File(libDir);
+            File[] files = dir.listFiles();
+            if(files != null){
+                for(File f : files){
+                    if(f.getName().equalsIgnoreCase("libmixu.so")){
+                        return f.length() >= MIXU_MIN_SIZE;
+                    }
+                }
+            }
+            File f1 = new File(libDir, "libMixu.so");
+            if(f1.exists()) return f1.length() >= MIXU_MIN_SIZE;
+            File f2 = new File(libDir, dx(S_LIB) + ".so");
+            if(f2.exists()) return f2.length() >= MIXU_MIN_SIZE;
+            return true;
         }catch(Exception e){ return true; }
     }
 
@@ -271,10 +284,13 @@ public class AntiMicu {
         return false;
     }
 
-    // 4. CHAN THAT report: host/den co duong dan report -> proxy chet (fail nhanh).
-    static final Set<String> BLOCK = new HashSet<>(Arrays.asList(
-        "report", "abuse", "cheat", "hack", "log-collect", "feedback",
-        "analytics", "haegin", "playtogether"
+    // 4. CHAN THAT report: chi chan telemetry / cheat-report / log-collection, KHONG chan login hay game traffic.
+    static final Set<String> REPORT_PATHS = new HashSet<>(Arrays.asList(
+        "/report", "/abuse", "/cheat_log", "/cheat-log", "/crash_report",
+        "/log_collect", "/log-collect", "/analytics/log", "/client_log"
+    ));
+    static final Set<String> WHITELIST = new HashSet<>(Arrays.asList(
+        "login", "auth", "session", "token", "gate", "gateway", "patch", "notice", "billing", "payment", "game"
     ));
     static void blockReports(){
         try{
@@ -287,11 +303,19 @@ public class AntiMicu {
             java.net.ProxySelector.setDefault(new java.net.ProxySelector(){
                 public java.util.List<java.net.Proxy> select(java.net.URI u){
                     try{
-                        String h = (u.getHost() == null ? "" : u.getHost().toLowerCase())
-                            + (u.getPath() == null ? "" : u.getPath().toLowerCase());
-                        for(String b : BLOCK){
-                            if(h.contains(b) && (h.contains("report") || h.contains("log")
-                                || h.contains("analytic") || h.contains("abuse") || h.contains("ban"))){
+                        if(u == null) return noProxy;
+                        String host = u.getHost() == null ? "" : u.getHost().toLowerCase();
+                        String path = u.getPath() == null ? "" : u.getPath().toLowerCase();
+                        String full = host + path;
+
+                        // Whitelist: khong bao gio chan luong dang nhap, xac thuc hay van hanh game
+                        for(String w : WHITELIST){
+                            if(full.contains(w)) return noProxy;
+                        }
+
+                        // Chi chan neu host/path chi dich danh telemetry hoac abuse report
+                        for(String rp : REPORT_PATHS){
+                            if(path.contains(rp) || host.startsWith("report.") || host.startsWith("analytics.")){
                                 Log.i(TAG, "block-report:" + u);
                                 return deadList;
                             }
