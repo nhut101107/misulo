@@ -15,3 +15,8 @@ ADMIN_IDS = "5992662564"
 SALT = "S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR"
 WEBHOOK_SECRET = "mnhutvip"
 PACKS = '[{"id":"1h","label":"1 Gio (Test)","days":0.0416,"price":0},{"id":"1d","label":"1 Ngay VIP","days":1,"price":5000},{"id":"3d","label":"3 Ngay VIP","days":3,"price":10000},{"id":"7d","label":"7 Ngay VIP","days":7,"price":20000},{"id":"15d","label":"15 Ngay VIP","days":15,"price":35000},{"id":"30d","label":"30 Ngay VIP","days":30,"price":50000},{"id":"vv","label":"Vinh Vien VIP","days":30000,"price":199000}]'
+
+[[d1_databases]]
+binding = "DB"
+database_name = "misulo_db"
+database_id = "00000000-0000-0000-0000-000000000000"
