@@ -125,3 +125,4 @@ var MicuKey = (function () {
   return { issueKey: issueKey, verifyKey: verifyKey, sha256: sha256, hmac: hmac, EPOCH_DAY: EPOCH_DAY };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = MicuKey;
+if (typeof globalThis !== 'undefined') globalThis.MnhutKey = globalThis.MicuKey = MicuKey;
