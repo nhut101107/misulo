@@ -67,7 +67,7 @@ function mainKeyboard() {
 
 function buildBot(env) {
   const bot = new Bot(env.BOT_TOKEN, env.__client ? { client: env.__client } : undefined);
-  onst store   bot.use(async (ctx, next) => {
+ const store = getStore(env); bot.use(async (ctx, next) => { 
         const origEdit = ctx.editMessageText ? ctx.editMessageText.bind(ctx) : null;
         ctx.editMessageText = async (text, extra) => {
                 if (ctx.callbackQuery?.message?.photo) {
