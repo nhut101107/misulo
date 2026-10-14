@@ -85,7 +85,7 @@ async function verifyKey(salt, key, deviceId = null) {
   const flag = payload.slice(3, 5);
   const devPart = payload.slice(5, 9);
   if (flag === 'DY') {
-    if (!deviceId) return { ok: false, reason: 'device_required' };
+    if (!deviceId) return { ok: false, reason: 'device_required' , deviceLocked: true};
     const expected = await deviceHash(salt, deviceId);
     if (expected !== devPart) return { ok: false, reason: 'device_mismatch' };
   }
