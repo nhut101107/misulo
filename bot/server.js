@@ -30,7 +30,7 @@ app.post('/payos-webhook', async (req, res) => {
 app.post('/sepay-webhook', async (req, res) => {
   try {
     const auth = req.headers['authorization'] || '';
-    if (auth !== 'Apikey ' + (process.env.SEPAY_API_KEY || '')) {
+    if (!process.env.SEPAY_API_KEY || auth !== 'Apikey ' + process.env.SEPAY_API_KEY) {
       return res.status(401).json({ success: false, message: 'unauthorized' });
     }
     const b = req.body || {};
