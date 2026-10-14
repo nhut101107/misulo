@@ -1,6 +1,6 @@
 // Storage cho Cloudflare D1 va In-memory mock
 export function d1Store(db) {
-  return {
+    const storeObj = {
     // --- USER MANAGEMENT ---
     async getUser(userId, username = '') {
       const uid = Number(userId);
@@ -19,16 +19,16 @@ export function d1Store(db) {
     async addDeposit(userId, amount) {
       const uid = Number(userId);
       const amt = Number(amount) || 0;
-      await this.getUser(uid);
+          await storeObj.getUser(uid);
       await db.prepare('UPDATE users SET balance = balance + ?, total_deposit = total_deposit + ? WHERE user_id = ?')
         .bind(amt, amt, uid).run();
-      return this.getUser(uid);
+          return storeObj.getUser(uid);
     },
 
     async deductBalance(userId, amount) {
       const uid = Number(userId);
       const amt = Number(amount) || 0;
-      const u = await this.getUser(uid);
+          const u = await storeObj.getUser(uid);
       if (u.balance < amt) return { ok: false, reason: 'insufficient_funds' };
       await db.prepare('UPDATE users SET balance = balance - ? WHERE user_id = ?').bind(amt, uid).run();
       return { ok: true, newBalance: u.balance - amt };
@@ -36,7 +36,7 @@ export function d1Store(db) {
 
     async setUserBan(userId, banned = true) {
       const uid = Number(userId);
-      await this.getUser(uid);
+          await storeObj.getUser(uid);
       await db.prepare('UPDATE users SET banned = ? WHERE user_id = ?').bind(banned ? 1 : 0, uid).run();
     },
 
@@ -171,6 +171,7 @@ export function d1Store(db) {
       return { paid: p.c, revenue: p.s, keys: k.c, pendingOrders: q.c, pendingTopups: t.c, users: u.c };
     }
   };
+  return storeObj;
 }
 
 // In-memory store for local testing
