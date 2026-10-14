@@ -67,7 +67,7 @@ function mainKeyboard() {
 
 function buildBot(env) {
   const bot = new Bot(env.BOT_TOKEN, env.__client ? { client: env.__client } : undefined);
- const store = getStore(env); bot.use(async (ctx, next) =>globalThis.__RL = globalThis.__RL || new Map(); const _now = Date.now(), _uid = ctx.from?.id; if (_uid) { if (_now - (globalThis.__RL.get(_uid) || 0) < 700) return; globalThis.__RL.set(_uid, _now); const _ul = (await env.MISULO_KV?.get("users_reg", { type: "json" })) || []; if (!_ul.some(u => u.id === _uid)) { _ul.push({ id: _uid, name: ctx.from.first_name || "User" }); await env.MISULO_KV?.put("users_reg", JSON.stringify(_ul)); } } if (ctx.message?.text || ctx.callbackQuery) { ctx.deleteMessage().catch(() => {}); }
+ const store = getStore(env); bot.use(async (ctx, next) => { globalThis.__RL = globalThis.__RL || new Map(); const _now = Date.now(), _uid = ctx.from?.id; if (_uid) { if (_now - (globalThis.__RL.get(_uid) || 0) < 700) return; globalThis.__RL.set(_uid, _now); const _ul = (await env.MISULO_KV?.get("users_reg", { type: "json" })) || []; if (!_ul.some(u => u.id === _uid)) { _ul.push({ id: _uid, name: ctx.from.first_name || "User" }); await env.MISULO_KV?.put("users_reg", JSON.stringify(_ul)); } } if (ctx.message?.text || ctx.callbackQuery) { ctx.deleteMessage().catch(() => {}); }
   { 
         const origEdit = ctx.editMessageText ? ctx.editMessageText.bind(ctx) : null;
         ctx.editMessageText = async (text, extra) => {
