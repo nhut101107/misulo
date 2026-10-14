@@ -20,7 +20,7 @@ function fmtVND(n) {
 }
 
 function qrUrl(bank, acc, amount, info, name) {
-  return `https://img.vietqr.io/image/${bank}-${acc}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(info)}&accountName=${encodeURIComponent(name || '')}`;
+  return `https://img.vietqr.io/image/${(String(bank||'').toUpperCase()==='MBBANK'?'MB':bank)}-${acc}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(info)}&accountName=${encodeURIComponent(name || '')}`;
 }
 
 function getAdminIds(env) {
@@ -265,11 +265,11 @@ function buildBot(env) {
       `⚠️ <b>LƯU Ý:</b> Chuyển khoản đúng nội dung <code>${code}</code>. Admin sẽ duyệt và gửi key ngay tại chat này!`;
 
     const kb = new InlineKeyboard()
-      .url('📸 Mở Ảnh Mã QR', qr).row()
+      .text('✅ Đã chuyển tiền (Kiểm tra)', `check_order_${code}`).row().url('📸 Mở Ảnh Mã QR', qr).row()
       .text('❌ Hủy Đơn', `cancel_order_${code}`)
       .text('🔙 Quay Lại', 'shop');
 
-    return ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: kb });
+    return ctx.replyWithPhoto(qr, { caption: text, parse_mode: 'HTML', reply_markup: kb });
   });
 
   // 2. NAP TIEN
@@ -333,10 +333,10 @@ function buildBot(env) {
       `👉 <i>Sau khi chuyển khoản, Admin sẽ duyệt và số tiền sẽ được cộng ngay vào ví của bạn!</i>`;
 
     const kb = new InlineKeyboard()
-      .url('📸 Mở Mã QR Thanh Toán', qr).row()
+      .text('✅ Đã chuyển tiền (Kiểm tra)', `check_topup_${code}`).row().url('📸 Mở Mã QR Thanh Toán', qr).row()
       .text('🔙 Quay lại Menu Nạp Tiền', 'topup_menu');
 
-    return ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: kb });
+    return ctx.replyWithPhoto(qr, { caption: text, parse_mode: 'HTML', reply_markup: kb });
   });
 
   // 3. TAI KHOAN
@@ -522,7 +522,7 @@ function buildBot(env) {
   bot.callbackQuery(/appr_order_(.+)/, async (ctx) => {
     if (!isAdmin(env, ctx.from.id)) return ctx.answerCallbackQuery('Chỉ Admin mới có quyền duyệt!');
     const code = ctx.match[1];
-    const o = await store.getOrder(code);
+    const o = await store.getOrder(code); const targetUserId = o.userId || o.user_id || o.uid;
     if (!o || o.status === 'paid') return ctx.answerCallbackQuery('Đơn này không tồn tại hoặc đã xử lý!');
 
     const key = await issueKey(env.SALT, o.days);
@@ -563,7 +563,7 @@ function buildBot(env) {
     if (o) {
       o.status = 'cancelled';
       await store.putOrder(o);
-      tgSend(env.BOT_TOKEN, o.user_id, `❌ Đơn mua key ${code} (${o.label}) của bạn đã bị từ chối do chưa thanh toán.`);
+      await tgSend(env.BOT_TOKEN, targetUserId, `❌ Đơn mua key ${code} (${o.label}) của bạn đã bị từ chối do chưa thanh toán.`);
     }
     await ctx.answerCallbackQuery('Đã từ chối đơn!');
     await ctx.editMessageText(ctx.callbackQuery.message.text + `\n\n❌ <b>ĐÃ TỪ CHỐI ĐƠN NÀY</b>`, { parse_mode: 'HTML' });
