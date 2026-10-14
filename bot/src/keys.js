@@ -5,7 +5,7 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; // base32 RFC4648, khong pa
 const EPOCH_DAY = Math.floor(Date.UTC(2025, 0, 1) / 86400000); // 20089
 const MAX_EXP = 32767; // 15 bit
 
-function enc(n, len) {
+function enc(n, len = 1) {
   n = n >>> 0;
   let s = '';
   for (let i = 0; i < len; i++) { s = ALPHABET[n & 31] + s; n >>>= 5; }
@@ -70,7 +70,8 @@ function verifyKey(salt, key, deviceId = null) {
   const flag = payload.slice(3, 5);
   const devPart = payload.slice(5, 9);
   if (flag === 'DY') {
-    if (deviceId && deviceHash(salt, deviceId) !== devPart) {
+    if (!deviceId) return { ok: false, reason: 'device_required', deviceLocked: true };
+    if (deviceHash(salt, deviceId) !== devPart) {
       return { ok: false, reason: 'device_mismatch', deviceLocked: true };
     }
   }
