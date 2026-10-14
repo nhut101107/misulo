@@ -1,25 +1,13 @@
 name: Deploy Cloudflare Worker
-on:
-  push:
-      branches: [ main ]
-        workflow_dispatch:
-
-        jobs:
-          deploy:
-              runs-on: ubuntu-latest
-                  steps:
-                        - uses: actions/checkout@v4
-                              - uses: actions/setup-node@v4
-                                      with:
-                                                node-version: '20'
-                                                      - name: Deploy Worker
-                                                              working-directory: bot/cf-worker
-                                                                      env:
-                                                                                CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-                                                                                        run: |
-                                                                                                  npm install
-                                                                                                            CF_HOST="api"
-                                                                                                                      CF_DOMAIN="cloudflare"
-                                                                                                                                CF_TLD="com"
-                                                                                                                                          ACC_ID=$(curl -s "https://${CF_HOST}.${CF_DOMAIN}.${CF_TLD}/client/v4/accounts" -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[0].id')
-                                                                                                                                                    CLOUDFLARE_ACCOUNT_ID=$ACC_ID npx wrangler deploy worker.js --name mnhut-vip-bot --compatibility-date 2024-09-23 --no-config
+on: [push, workflow_dispatch]
+jobs:
+deploy:
+runs-on: ubuntu-latest
+steps:
+- uses: actions/checkout@v4
+- name: Deploy
+  working-directory: bot/cf-worker
+  run: npm install && npx wrangler deploy worker.js --name mnhut-vip-bot --compatibility-date 2024-09-23 --no-config
+  env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  
