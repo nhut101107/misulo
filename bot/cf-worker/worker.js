@@ -278,7 +278,7 @@ function buildBot(env) {
                                 }
                                   
                                       return await next();
-  });= getStore(env);
+ }); 
   const PACKS = getPacks(env);
 
   // Check Maintenance
