@@ -223,7 +223,7 @@ var MnhutKey = (function () {
   }
   return { issueKey: issueKey, verifyKey: verifyKey, sha256: sha256, hmac: hmac, EPOCH_DAY: EPOCH_DAY, deviceHash: deviceHash };
 })();
-if (typeof module !== 'undefined' && module.exports) module.exports = MnhutKey;
+if (typeof module !== 'undefined' && module.exports) module.exports = MnhutKey;globalThis.MnhutKey = globalThis.MicuKey = MnhutKey;
 
 var SALT = "S6JKQT3UTCYtHNSvKgHXwRXHaNc248HR";
 function gen(){
